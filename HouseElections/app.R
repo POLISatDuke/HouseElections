@@ -13,12 +13,32 @@ congress_to_election = function(congress){
   2 * congress + 1786
 }
 
-elections = read_csv("Data/house.csv")
+# Removes parsing failures (mistakes in data format)
+elections = read_csv("../Data/house.csv")
+problemrows = problems(elections)$row
+elections = elections[-problemrows,]
 
 ui = dashboardPage(
-  dashboardHeader("US House Elections"),
-  dashboardSidebar(),
+  
+  dashboardHeader(title = "US House Elections"),
+
+  dashboardSidebar(
+    
+    width = 400,
+
+    sliderInput(inputId = "time",
+                label = "Election Year ",
+                min = congress_to_election(1),
+                max = congress_to_election(116),
+                value = congress_to_election(116),
+                step = 1,
+                animate = TRUE,
+                width = 380,
+                sep = "")
+  ),
+
   dashboardBody()
+  
 )
 
 server = function(input, output){

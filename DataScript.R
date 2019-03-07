@@ -1,3 +1,5 @@
+## Reshapes election data to more R-friendly format, saves as csv
+
 library(readxl)
 library(dplyr)
 House_Elections = read_excel("Data/House Elections.xlsx")
@@ -44,6 +46,8 @@ for(i in seq(1, ncol(House_Elections), 12)){
     )) %>%
     mutate(Dperc = as.numeric(Dperc)) %>%
     mutate(Rperc = as.numeric(Rperc))
+  print(this_year[1,1])
+  print(warnings())
   elections = rbind(elections, this_year)
 }
 elections = elections[-1,]
