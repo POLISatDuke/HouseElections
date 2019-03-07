@@ -1,5 +1,7 @@
 # Code adapted from tutorial at http://cdmaps.polisci.ucla.edu/tut/mapping_congress_in_R.html
 
+library(sf)
+
 get_congress_map <- function(cong=113) {
   tmp_file <- tempfile()
   tmp_dir  <- tempdir()
@@ -10,10 +12,8 @@ get_congress_map <- function(cong=113) {
   st_read(fpath)
 }
 
-shapes = list()
-
-for(i in 1:114){
-  shapes = c(shapes, list(i, get_congress_map(i)))
+for(i in 81:114){
+  shapefile = get_congress_map(i)
+  filepath= paste0("Data/districts/shape",i,".Rdata")
+  save(shapefile, file = filepath)
 }
-
-save(shapes, "Data/shapes.Rdata")
