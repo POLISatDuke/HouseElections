@@ -14,6 +14,7 @@ get_congress_map <- function(cong=113) {
 
 for(i in 81:114){
   shapefile = get_congress_map(i)
+  shapefile = shapefile[,c("STATENAME", "ID", "DISTRICT", "geometry")]
   filepath= paste0("Data/districts/shape",i,".Rdata")
   save(shapefile, file = filepath)
 }
