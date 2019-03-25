@@ -7,6 +7,9 @@ library(fiftystater)
 library(mapproj)
 library(scales)
 library(statebins)
+library(geosphere)
+library(maptools)
+library(rgeos)
 
 ### Disable Sci Notation
 options(scipen = 999)
@@ -29,7 +32,17 @@ party_colors <- c("#2E74C0", "#CB454A")
 
 # US state boundaries
 data("fifty_states")
-###
+# Calculate centroids by state
+states = unique(fifty_states$id)
+states = states[states!="district of columbia"]
+centroids = data.frame(state = states, long = rep(0,50), lat = rep(0,50))
+for(state in states){
+  centroids[centroids$state == state, 2:3] = geosphere::centroid(fifty_states[fifty_states$id == state, c("long", "lat")])
+}
+### Hexagrams
+script <- RCurl::getURL("https://raw.githubusercontent.com/profrichharris/Rhexogram/master/functions.R")
+eval(parse(text = script))
+
 
 ### Data load
 # Removes parsing failures (mistakes in data format)
@@ -57,13 +70,13 @@ D_R = max(abs(maxD_R), abs(minD_R))
 ###
 
 ui = dashboardPage(
-
+  
   dashboardHeader(title = "US House Elections"),
-
+  
   dashboardSidebar(
-
+    
     width = 400,
-
+    
     sliderInput(inputId = "election",
                 label = "Election Year ",
                 min = congress_to_election(1),
@@ -73,7 +86,7 @@ ui = dashboardPage(
                 animate = TRUE,
                 width = 380,
                 sep = ""),
-
+    
     radioButtons(inputId = "display",
                  label = "Show:",
                  choices = c("States", "Statebins", "Seats"),
@@ -88,17 +101,17 @@ ui = dashboardPage(
                              "Total Votes" = "V"),
                  selected = "D")
   ),
-
+  
   dashboardBody(
     fluidRow(
       box(plotOutput("map", height = 800), width = 12, height = 850)
     )
   )
-
+  
 )
 
 server = function(input, output){
-
+  
   output$map = renderPlot({
     ### Subset and manipulate data for this year
     this_year = elections_state_year %>%
@@ -109,7 +122,7 @@ server = function(input, output){
     ### Make base plot first, if statements add options
     if(input$display == "States"){
       myPlot = ggplot(data = this_year_sp,
-                          mapping = aes(x = long, y = lat, group = group)) + 
+                      mapping = aes(x = long, y = lat, group = group)) + 
         geom_polygon(color = "black", size = 1/4) + 
         coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
         theme_void()
@@ -137,7 +150,7 @@ server = function(input, output){
       if(input$toPlot == "D-R"){
         myPlot = myPlot + aes(fill = demSurplus) +
           scale_fill_gradient2(low = party_colors[2], 
-                                high = party_colors[1]) + 
+                               high = party_colors[1]) + 
           guides(fill = guide_colorbar(title = "Democrat Seats - Republican Seats", barwidth = 20)) +
           theme(legend.position = "bottom",
                 legend.text = element_text(size = 24),
@@ -245,10 +258,20 @@ server = function(input, output){
           theme(legend.position = "bottom")
       }
     }
-
+    if(input$display == "Seats"){
+      ### Step 1: Assign hexes from earlier to districts and states
+      elections_year = elections[elections$Year == input$election,]
+      elections_year$long = NA
+      elections_year$lat = NA
+      for(state in states){
+        elections_year[tolower(elections_year$State)==state,c("long", "lat")] = centroids[centroids$state==state, c("long", "lat")]
+      }
+      elections_year$long = elections_year$long + rnorm(length(elections_year$long))
+      elections_year$lat = elections_year$lat + rnorm(length(elections_year$lat))
+    }
     myPlot
   })
-
+  
 }
 
 shinyApp(ui, server)
