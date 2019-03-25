@@ -5,6 +5,11 @@ library(shinydashboard)
 library(readr)
 library(fiftystater)
 library(mapproj)
+library(scales)
+library(statebins)
+
+### Disable Sci Notation
+options(scipen = 999)
 
 ### Silly functions to easily convert between years <-> congress numbers
 year_to_congress = function(year){
@@ -36,9 +41,10 @@ elections_state_year = elections %>%
   dplyr::summarize(R = sum(Winner == "R"),
                    D = sum(Winner == "D"),
                    total = as.numeric(sum(Total))) %>%
-  dplyr::mutate(demSurplus = D - R)
+  dplyr::mutate(demSurplus = D - R,
+                reps = D + R)
 # Binning to state-years
-elections_state_year$caption = paste0(elections_state_year$R, "R-", this_year$D, "D")
+elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
 # Calculating gradient limits
 maxD = max(elections_state_year$D)
@@ -46,6 +52,7 @@ maxR = max(elections_state_year$R)
 maxTot = max(elections_state_year$total)
 maxD_R = max(elections_state_year$demSurplus)
 minD_R = min(elections_state_year$demSurplus)
+maxReps = max(elections_state_year$reps)
 D_R = max(abs(maxD_R), abs(minD_R))
 ###
 
@@ -69,8 +76,8 @@ ui = dashboardPage(
 
     radioButtons(inputId = "display",
                  label = "Show:",
-                 choices = c("States", "Seats"),
-                 selected = "States"),
+                 choices = c("States", "Statebins", "Seats"),
+                 selected = "Statebins"),
     
     radioButtons(inputId = "toPlot",
                  label = "Color by:",
@@ -110,7 +117,7 @@ server = function(input, output){
       if(input$toPlot == "D"){
         myPlot = myPlot + aes(fill = D) +
           scale_fill_continuous(low = "#ffffff", high = party_colors[1], limits = c(0, maxD)) + 
-          guides(fill = guide_legend(title = "Democrat Seats")) + 
+          guides(fill = guide_colorbar(title = "Democrat Seats", barwidth = 20)) + 
           theme(legend.position = "bottom",
                 legend.text = element_text(size = 24),
                 legend.title = element_text(size = 24))
@@ -121,7 +128,7 @@ server = function(input, output){
           scale_fill_continuous(low = "#ffffff", 
                                 high = party_colors[2], 
                                 limits = c(0, maxR)) + 
-          guides(fill = guide_legend(title = "Republican Seats")) + 
+          guides(fill = guide_colorbar(title = "Republican Seats", barwidth = 20)) + 
           theme(legend.position = "bottom",
                 legend.text = element_text(size = 24),
                 legend.title = element_text(size = 24))
@@ -131,20 +138,112 @@ server = function(input, output){
         myPlot = myPlot + aes(fill = demSurplus) +
           scale_fill_gradient2(low = party_colors[2], 
                                 high = party_colors[1]) + 
-          guides(fill = guide_legend(title = "Democrat Seats - Republican Seats")) +
+          guides(fill = guide_colorbar(title = "Democrat Seats - Republican Seats", barwidth = 20)) +
           theme(legend.position = "bottom",
                 legend.text = element_text(size = 24),
                 legend.title = element_text(size = 24))
       }
       
       if(input$toPlot == "D+R"){
-        myPlot = myPlot + aes(fill = D+R) + 
-          scale_fill_continuous(low = "white", high = "purple")
+        myPlot = myPlot + aes(fill = reps) + 
+          scale_fill_continuous(low = "white", high = "purple",
+                                limits = c(NA, maxReps)) + 
+          guides(fill = guide_colorbar(title = "Total Representation", barwidth = 20)) +
+          theme(legend.position = "bottom",
+                legend.text = element_text(size=24),
+                legend.title = element_text(size=24))
+      }
+      
+      if(input$toPlot == "V"){
+        myPlot = myPlot + aes(fill = total) + 
+          scale_fill_continuous(label = comma,
+                                low = "white", high = "purple",
+                                limits = c(NA, maxTot)) + 
+          guides(fill = guide_colorbar(title = "Total \n Votes Cast", barwidth = 20,
+                                       label.theme = element_text(angle = 35,
+                                                                  size = 24,
+                                                                  vjust = 0.5),
+                                       title.theme = element_text(hjust = 0.5,
+                                                                  size = 24))) + 
+          theme(legend.position = "bottom")
       }
       
     }
-    if(input$display == "Seats"){
-      # Something else
+    if(input$display == "Statebins"){
+      if(input$toPlot == "D"){
+        myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                      state_col = "State", 
+                                      value_col = "D",
+                                      text_color = "gray", 
+                                      font_size = 12, 
+                                      state_border_col = "white",
+                                      legend_position = "bottom") +
+          scale_fill_continuous(low = "#ffffff", high = party_colors[1], limits = c(0, maxD)) + 
+          guides(fill = guide_colorbar(title = "Democrat Seats", barwidth = 20,
+                                       label.theme = element_text(size = 24),
+                                       title.theme = element_text(size = 24)))
+      }
+      if(input$toPlot == "R"){
+        myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                      state_col = "State", 
+                                      value_col = "R",
+                                      text_color = "gray", 
+                                      font_size = 12, 
+                                      state_border_col = "white",
+                                      legend_position = "bottom") +
+          scale_fill_continuous(low = "#ffffff", high = party_colors[2], limits = c(0, maxR)) + 
+          guides(fill = guide_colorbar(title = "Republican Seats", barwidth = 20,
+                                       label.theme = element_text(size = 24),
+                                       title.theme = element_text(size = 24)))        
+      }
+      if(input$toPlot == "D-R"){
+        myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                      state_col = "State", 
+                                      value_col = "demSurplus",
+                                      text_color = "gray", 
+                                      font_size = 12, 
+                                      state_border_col = "white",
+                                      legend_position = "bottom") +
+          scale_fill_gradient2(low = party_colors[2], 
+                               high = party_colors[1]) +
+          guides(fill = guide_colorbar(title = "Democratic Seat Lead", barwidth = 20,
+                                       label.theme = element_text(size = 24),
+                                       title.theme = element_text(size = 24)))
+      }
+      if(input$toPlot == "D+R"){
+        myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                      state_col = "State", 
+                                      value_col = "reps",
+                                      text_color = "gray", 
+                                      font_size = 12, 
+                                      state_border_col = "white",
+                                      legend_position = "bottom") + 
+          scale_fill_continuous(low = "white", high = "purple",
+                                limits = c(NA, maxReps)) + 
+          guides(fill = guide_colorbar(title = "Total Representation", barwidth = 20)) +
+          theme(legend.position = "bottom",
+                legend.text = element_text(size=24),
+                legend.title = element_text(size=24))
+      }
+      if(input$toPlot == "V"){
+        myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                      state_col = "State", 
+                                      value_col = "total",
+                                      text_color = "gray", 
+                                      font_size = 12, 
+                                      state_border_col = "white",
+                                      legend_position = "bottom")+ 
+          scale_fill_continuous(label = comma,
+                                low = "white", high = "purple",
+                                limits = c(NA, maxTot)) + 
+          guides(fill = guide_colorbar(title = "Total \n Votes Cast", barwidth = 20,
+                                       label.theme = element_text(angle = 35,
+                                                                  size = 24,
+                                                                  vjust = 0.5),
+                                       title.theme = element_text(hjust = 0.5,
+                                                                  size = 24))) + 
+          theme(legend.position = "bottom")
+      }
     }
 
     myPlot
