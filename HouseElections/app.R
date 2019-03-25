@@ -44,7 +44,7 @@ for(state in states){
 }
 
 ### Data load
-# Removes parsing failures (mistakes in data format)
+# Removes parsing failures (mistakes in data formatting)
 elections = read_csv("../Data/house.csv")
 problemrows = problems(elections)$row
 elections = elections[-problemrows,]
@@ -282,18 +282,20 @@ server = function(input, output){
       elections_year$hexlong = NA
       elections_year$hexlat = NA
       availableHexes = round(elections_year[1,c("lat","long")],0)
-      usedHexes = data.frame(lat = NULL, long = NULL)
+      names(availableHexes) = c("hexlat", "hexlong")
+      usedHexes = data.frame(hexlat = NULL, hexlong = NULL)
+      myState = data.frame(hexlat = NULL, hexlong = NULL)
       for(state in stateOrder){
         for(i in 1:nrow(elections_year)){
           if(elections_year$State[i] == state){
             pt = elections_year[i, c("lat", "long")]
             availableHexes = availableHexes %>% 
-              dplyr::mutate(distance = (lat - unlist(pt[1,1]))^2 + (long - unlist(pt[1,2]))^2)
+              dplyr::mutate(distance = (hexlat - unlist(pt[1,1]))^2 + (hexlong - unlist(pt[1,2]))^2)
             myHex = availableHexes[availableHexes$distance == min(availableHexes$distance),]
             usedHexes = rbind(usedHexes, myHex[1,1:2])
             elections_year[i, c("hexlong", "hexlat")] = myHex[1,1:2]
-            newAvailable = data.frame(lat = rep(unlist(myHex[1,1]),18) + c(-2, 0, 2, -3, -1, 1, 3, -4, -2, 2, 4, -3, -1, 1, 3, -2, 0, 2),
-                                      long = rep(unlist(myHex[1,2]),18) + c(4, 4, 4, 2, 2, 2, 2, 0, 0, 0, 0, -2, -2, -2, -2, -4, -4, -4))
+            newAvailable = data.frame(hexlat = rep(unlist(myHex[1,1]),18) + c(-2, 0, 2, -3, -1, 1, 3, -4, -2, 2, 4, -3, -1, 1, 3, -2, 0, 2),
+                                      hexlong = rep(unlist(myHex[1,2]),18) + c(4, 4, 4, 2, 2, 2, 2, 0, 0, 0, 0, -2, -2, -2, -2, -4, -4, -4))
             availableHexes = unique(rbind(availableHexes[,1:2], newAvailable))
             availableHexes = dplyr::anti_join(availableHexes, usedHexes)
           } 
