@@ -28,7 +28,10 @@ congress_to_election = function(congress){
 
 ### Various handy objects
 # Hex color codes for Dem Blue and Rep Red
-party_colors <- c("#2E74C0", "#CB454A") 
+party_colors <- c("#2E74C0", "#CB454A")
+# Hexagon Radius (center to vertex)
+radius = 1
+offset = sqrt(radius^2 + radius^2/4)
 
 # US state boundaries
 data("fifty_states")
@@ -39,10 +42,6 @@ centroids = data.frame(state = states, long = rep(0,50), lat = rep(0,50))
 for(state in states){
   centroids[centroids$state == state, 2:3] = geosphere::centroid(fifty_states[fifty_states$id == state, c("long", "lat")])
 }
-### Hexagrams
-script <- RCurl::getURL("https://raw.githubusercontent.com/profrichharris/Rhexogram/master/functions.R")
-eval(parse(text = script))
-
 
 ### Data load
 # Removes parsing failures (mistakes in data format)
@@ -266,8 +265,33 @@ server = function(input, output){
       for(state in states){
         elections_year[tolower(elections_year$State)==state,c("long", "lat")] = centroids[centroids$state==state, c("long", "lat")]
       }
-      elections_year$long = elections_year$long + rnorm(length(elections_year$long))
-      elections_year$lat = elections_year$lat + rnorm(length(elections_year$lat))
+      set.seed(1) # Want to jitter hexes in reproducible manner
+      elections_year$long = elections_year$long + rnorm(length(elections_year$long), mean = 0, sd = 0.1)
+      elections_year$lat = elections_year$lat + rnorm(length(elections_year$lat), mean = 0, sd = 0.1)
+      
+      elections_year = elections_year %>% 
+        dplyr::mutate(plotOrder = rank(-lat - long))
+      elections_year = elections_year[order(elections_year$plotOrder),]
+      elections_year$hexlong = NA
+      elections_year$hexlat = NA
+      availableHexes = round(elections_year[1,c("lat","long")],0)
+      usedHexes = data.frame(lat = NULL, long = NULL)
+      for(i in 1:nrow(elections_year)){
+        pt = elections_year[i, c("lat", "long")]
+        availableHexes = availableHexes %>% 
+          dplyr::mutate(distance = (lat - unlist(pt[1,1]))^2 + (long - unlist(pt[1,2]))^2)
+        myHex = availableHexes[availableHexes$distance == min(availableHexes$distance),]
+        usedHexes = rbind(usedHexes, myHex[1,1:2])
+        elections_year[i, c("hexlong", "hexlat")] = myHex[1,1:2]
+        newAvailable = data.frame(lat = rep(unlist(myHex[1,1]),18) + c(-2, 0, 2, -3, -1, 1, 3, -4, -2, 2, 4, -3, -1, 1, 3, -2, 0, 2),
+                                  long = rep(unlist(myHex[1,2]),18) + c(4, 4, 4, 2, 2, 2, 2, 0, 0, 0, 0, -2, -2, -2, -2, -4, -4, -4))
+        availableHexes = unique(rbind(availableHexes[,1:2], newAvailable))
+        availableHexes = dplyr::anti_join(availableHexes, usedHexes)
+      }
+      elections_year$hexlong = elections_year$hexlong - 
+        10 * as.numeric(elections_year$State == "Hawaii") - 
+        20 * as.numeric(elections_year$State == "Alaska")
+      plot(elections_year$hexlat ~ elections_year$hexlong)
     }
     myPlot
   })
