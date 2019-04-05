@@ -29,25 +29,17 @@ congress_to_election = function(congress){
 ### Various handy objects
 # Hex color codes for Dem Blue and Rep Red
 party_colors <- c("#2E74C0", "#CB454A")
-# Hexagon Radius (center to vertex)
-radius = 1
-offset = sqrt(radius^2 + radius^2/4)
 
 # US state boundaries
 data("fifty_states")
-# Calculate centroids by state
-states = unique(fifty_states$id)
-states = states[states!="district of columbia"]
-centroids = data.frame(state = states, long = rep(0,50), lat = rep(0,50))
-for(state in states){
-  centroids[centroids$state == state, 2:3] = geosphere::centroid(fifty_states[fifty_states$id == state, c("long", "lat")])
-}
 
 ### Data load
 # Removes parsing failures (mistakes in data formatting)
 elections = read_csv("../Data/house.csv")
 problemrows = problems(elections)$row
-elections = elections[-problemrows,]
+if(length(problemrows)>0){
+  elections = elections[-problemrows,]
+}
 elections_state_year = elections %>%
   dplyr::group_by(State, Year) %>%
   dplyr::summarize(R = sum(Winner == "R"),
@@ -88,7 +80,7 @@ ui = dashboardPage(
     
     radioButtons(inputId = "display",
                  label = "Show:",
-                 choices = c("States", "Statebins", "Seats"),
+                 choices = c("States", "Statebins"),
                  selected = "Statebins"),
     
     radioButtons(inputId = "toPlot",
@@ -258,81 +250,6 @@ server = function(input, output){
                                                                   size = 24))) + 
           theme(legend.position = "bottom")
       }
-    }
-    if(input$display == "Seats"){
-      ### Step 1: Assign hexes from earlier to districts and states
-      elections_year = elections[elections$Year == input$election,]
-      elections_year$long = NA
-      elections_year$lat = NA
-      for(state in states){
-        elections_year[tolower(elections_year$State)==state,c("long", "lat")] = centroids[centroids$state==state, c("long", "lat")]
-      }
-      set.seed(1) # Want to jitter hexes in reproducible manner
-      elections_year$long = elections_year$long + rnorm(length(elections_year$long), mean = 0, sd = 0.1)
-      elections_year$lat = elections_year$lat + rnorm(length(elections_year$lat), mean = 0, sd = 0.1)
-      
-      elections_year = elections_year %>% 
-        dplyr::mutate(plotOrder = rank(-lat - long))
-      elections_year = elections_year[order(elections_year$plotOrder),]
-      stateOrder = elections_year %>%
-        group_by(State) %>%
-        summarise(ord = max(plotOrder))
-      stateOrder = stateOrder$State[order(stateOrder$ord)]
-      elections_year = elections_year[order(elections_year$plotOrder),]
-      elections_year$hexlong = NA
-      elections_year$hexlat = NA
-      availableHexes = round(elections_year[1,c("lat","long")],0)
-      names(availableHexes) = c("hexlat", "hexlong")
-      usedHexes = data.frame(hexlat = NULL, hexlong = NULL)
-      myState = data.frame(hexlat = NULL, hexlong = NULL)
-      for(state in stateOrder){
-        for(i in 1:nrow(elections_year)){
-          if(elections_year$State[i] == state){
-            pt = elections_year[i, c("lat", "long")]
-            availableHexes = availableHexes %>% 
-              dplyr::mutate(distance = (hexlat - unlist(pt[1,1]))^2 + (hexlong - unlist(pt[1,2]))^2)
-            myHex = availableHexes[availableHexes$distance == min(availableHexes$distance),]
-            usedHexes = rbind(usedHexes, myHex[1,1:2])
-            elections_year[i, c("hexlong", "hexlat")] = myHex[1,1:2]
-            newAvailable = data.frame(hexlat = rep(unlist(myHex[1,1]),18) + c(-2, 0, 2, -3, -1, 1, 3, -4, -2, 2, 4, -3, -1, 1, 3, -2, 0, 2),
-                                      hexlong = rep(unlist(myHex[1,2]),18) + c(4, 4, 4, 2, 2, 2, 2, 0, 0, 0, 0, -2, -2, -2, -2, -4, -4, -4))
-            availableHexes = unique(rbind(availableHexes[,1:2], newAvailable))
-            availableHexes = dplyr::anti_join(availableHexes, usedHexes)
-          } 
-        }
-      }
-      elections_year$hexlong = elections_year$hexlong - 
-        10 * as.numeric(elections_year$State == "Hawaii") - 
-        20 * as.numeric(elections_year$State == "Alaska")
-      
-      # From midpoints calculate vertices to draw entire hexes
-      elections_year_hex1 = elections_year %>% 
-        mutate(hexlat = hexlat + sqrt(2/3),
-               hexlong = hexlong + 1)
-      elections_year_hex2 = elections_year %>% 
-        mutate(hexlat = hexlat + 4/3)
-      elections_year_hex3 = elections_year %>%
-        mutate(hexlat = hexlat + sqrt(2/3),
-               hexlong = hexlong - 1)
-      elections_year_hex4 = elections_year %>%
-        mutate(hexlat = hexlat - sqrt(2/3),
-               hexlong = hexlong - 1)
-      elections_year_hex5 = elections_year %>%
-        mutate(hexlat = hexlat - 4/3)
-      elections_year_hex6 = elections_year %>%
-        mutate(hexlat = hexlat - sqrt(2/3),
-               hexlong = hexlong + 1)
-      elections_year_hex = rbind(elections_year_hex1, elections_year_hex2, elections_year_hex3, 
-                                 elections_year_hex4, elections_year_hex5, elections_year_hex6) %>%
-        mutate(id = paste0(State, District))
-      state_borders = elections_year_hex %>% select(State, hexlong, hexlat)
-      myPlot = ggplot(data = elections_year_hex) + 
-        geom_polygon(mapping = aes(x = hexlong,
-                                   y = hexlat,
-                                   id = id,
-                                   fill = Winner)) + 
-        theme_void()
-      
     }
     myPlot
   })
