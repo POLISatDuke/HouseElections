@@ -105,8 +105,56 @@ maxWasted = max(elections_state_year$WastedVotes)
 maxRWasted = max(elections_state_year$RepublicanWasted)
 maxDWasted = max(elections_state_year$DemocratWasted)
 
-# Set up App
+# Statebin Coordinates for clicks
+statebins_coords = data.frame(
+  State = c("Hawaii", "Alaska", 
+            "California", "Oregon", "Washington",
+            "Arizona", "Utah", "Nevada", "Idaho",
+            
+            "New Mexico", "Colorado", "Wyoming", "Montana",
+            "Texas", "Oklahoma", "Kansas", "Nebraska", "South Dakota", "North Dakota",
+            "Louisiana", "Arizona", "Montana", "Iowa", "Minnesota",
+            
+            "Mississippi", "Tennessee", "Kentucky", "Indiana", "Illinois", "Wisconsin",
+            "Alabama", "North Carolina", "West Virginia", "Ohio", "Michigan",
+            "Georgia", "South Carolina", "Virginia", "Pennsylvania",
+            
+            "Florida", "Maryland", "New Jersey", "New York",
+            "Delaware", "Connecticut", "Massachusetts", "Vermont",
+            "Rhode Island", "New Hampshire", "Maine"),
+  x = c(rep(1, 2),
+        rep(2, 3),
+        rep(3, 4),
+        
+        rep(4, 4),
+        rep(5, 6),
+        rep(6, 5),
+        
+        rep(7, 6),
+        rep(8, 5),
+        rep(9, 4),
+        
+        rep(10, 4),
+        rep(11, 4),
+        rep(12, 3)),
+  y = c(8, 7,
+        5:3,
+        6:3,
+        
+        6:3,
+        8:3,
+        7:3,
+        
+        7:2,
+        7:3,
+        7:4,
+        
+        8, 5:3,
+        5:2,
+        4, 2, 1)
+)
 
+# Set up App
 ui = dashboardPage(
   
   dashboardHeader(title = "US House Elections"),
@@ -122,7 +170,7 @@ ui = dashboardPage(
                 animate = TRUE,
                 width = 380,
                 sep = ""),
-
+    
     radioButtons(inputId = "toPlot",
                  label = "Color by:",
                  choices = c("Democrat Seats" = "D", 
@@ -145,9 +193,20 @@ ui = dashboardPage(
   
   dashboardBody(
     fluidRow(
-      box(plotOutput("map", height = 700, hover = hoverOpts(id = "plot_hover")),
-          verbatimTextOutput("hover_info"), 
-          width = 7, height = 650)
+      box(plotOutput("map", height = 550, click = clickOpts(id = "plot_click")), 
+          width = 7, height = 575),
+      box(div(style = "overflow-y: scroll", verbatimTextOutput("state_info")),
+          height = 575,
+          width = 5)
+    ),
+    
+    fluidRow(
+      box(title = "District Results",
+          width = 12,
+          height = 575,
+          collapsible = TRUE,
+          div(style = "overflow-x: scroll", dataTableOutput("click_info"))
+      )
     )
   )
   
@@ -414,9 +473,28 @@ server = function(input, output){
     myPlot
   })
   
-  output$hover_info = renderPrint({
-    cat("input$plot_hover:\n")
-    str(input$plot_hover)
+  output$click_info = renderDataTable({
+    nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]
+    elections %>% 
+      filter(State == nearestState,
+             Year == input$election)
+  },     
+  options = list(
+    pageLength = 10,
+    searching = FALSE
+  ))
+  
+  output$state_info = renderText({
+    nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]
+    stateInfo = elections_state_year %>%
+      filter(State == nearestState,
+             Year == input$election)
+    paste(nearestState, "\n",
+          "Total Votes:", as.character(stateInfo$Total), "\n",
+          "% Democrat Votes:", as.character(round(stateInfo$DVotes/stateInfo$Total * 100, 2)), "\n",
+          "% Democrat Seats:", as.character(round(stateInfo$D/stateInfo$Reps, 2)), "\n",
+          "Ratio:", as.character(stateInfo$Dvotes / stateInfo$Total / stateInfo$D * stateInfo$Reps), "\n",
+          "% \'Wasted\' Votes:", as.character(round(stateInfo$PercWasted, 2)))
   })
   
 }
