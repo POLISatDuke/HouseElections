@@ -27,7 +27,7 @@ congress_to_election = function(congress){
 
 ### Various handy objects
 # Hex color codes for Dem Blue and Rep Red
-party_colors <- c("#2E74C0", "#CB454A")
+party_colors <- c("#2E74C0", "#CB454A", "#F0E060")
 
 # US state boundaries
 data("fifty_states")
@@ -62,11 +62,11 @@ elections = elections %>%
          ExcessVotes = WinningVotes - SecondPlaceVotes,
          WastedVotes = ExcessVotes + LosingVotes,
          RepublicanWasted = 
-           LosingVotes * as.numeric(Winner != "R") + 
-           ExcessVotes * as.numeric(Winner == "R"),
+           Republican * as.numeric(Winner != "R") + 
+           (Republican - SecondPlaceVotes) * as.numeric(Winner == "R"),
          DemocratWasted = 
-           LosingVotes * as.numeric(Winner != "D") + 
-           ExcessVotes * as.numeric(Winner == "D"))
+           Democrat * as.numeric(Winner != "D") + 
+           (Democrat - SecondPlaceVotes) * as.numeric(Winner == "D"))
 elections_state_year = elections %>%
   group_by(State, Year) %>%
   summarize(R = sum(Winner == "R"),
@@ -82,26 +82,22 @@ elections_state_year = elections %>%
             ExcessVotes = sum(ExcessVotes),
             WastedVotes = sum(WastedVotes),
             RepublicanWasted = sum(RepublicanWasted),
-            DemocratWasted = sum(DemocratWasted)
-  ) %>% 
+            DemocratWasted = sum(DemocratWasted)) %>% 
   mutate(PercWasted = WastedVotes / Total * 100,
          PercRepublicanWasted = RepublicanWasted / RVotes * 100,
-         PercDemocratWasted = DemocratWasted / DVotes * 100,
-         WasteProbRatio = PercDemocratWasted / PercRepublicanWasted)
+         PercDemocratWasted = DemocratWasted / DVotes * 100 )
 # Binning by state and year
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
 # Calculating gradient limits
 maxD = max(elections_state_year$D)
 maxR = max(elections_state_year$R)
+maxO = max(elections_state_year$O)
 maxTot = max(elections_state_year$Total)
 maxD_R = max(elections_state_year$DemSurplus)
 minD_R = min(elections_state_year$DemSurplus)
 maxReps = max(elections_state_year$Reps)
 D_R = max(abs(maxD_R), abs(minD_R))
-maxRVotes = max(elections_state_year$RVotes)
-maxDVotes = max(elections_state_year$DVotes)
-maxOVotes = max(elections_state_year$OVotes)
 maxLosing = max(elections_state_year$LosingVotes)
 maxWinning = max(elections_state_year$WinningVotes)
 maxExcess = max(elections_state_year$ExcessVotes)
@@ -117,8 +113,6 @@ ui = dashboardPage(
   
   dashboardSidebar(
     
-    width = 400,
-    
     sliderInput(inputId = "election",
                 label = "Election Year ",
                 min = min(elections_state_year$Year),
@@ -133,17 +127,27 @@ ui = dashboardPage(
                  label = "Color by:",
                  choices = c("Democrat Seats" = "D", 
                              "Republican Seats" = "R",
+                             "Other Seats" = "O",
                              "Democrat Seat Lead" = "D-R",
                              "Total Seats" = "D+R",
-                             "Total Votes" = "V"),
+                             "Total Votes" = "V",
+                             "Losing Votes" = "LV",
+                             "Winning Votes" = "WiV",
+                             "Excess Votes" = "EV",
+                             "Wasted Votes" = "WaV",
+                             "Total Wasted Votes (%)" = "PWV",
+                             "Republican Wasted Votes" = "RWV",
+                             "Democrat Wasted Votes" = "DWV",
+                             "Republican Wasted Votes (%)" = "RWVP",
+                             "Democrat Wasted Votes (%)" = "DWVP"),
                  selected = "D")
   ),
   
   dashboardBody(
     fluidRow(
-      box(plotOutput("map", height = 800, hover = hoverOpts(id = "plot_hover")),
+      box(plotOutput("map", height = 700, hover = hoverOpts(id = "plot_hover")),
           verbatimTextOutput("hover_info"), 
-          width = 12, height = 850)
+          width = 7, height = 650)
     )
   )
   
@@ -181,6 +185,19 @@ server = function(input, output){
                                     legend_position = "bottom") +
         scale_fill_continuous(low = "#ffffff", high = party_colors[2], limits = c(0, maxR)) + 
         guides(fill = guide_colorbar(title = "Republican Seats", barwidth = 20,
+                                     label.theme = element_text(size = 24),
+                                     title.theme = element_text(size = 24)))        
+    }
+    if(input$toPlot == "O"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "O",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom") +
+        scale_fill_continuous(low = "#ffffff", high = party_colors[3], limits = c(0, maxO)) + 
+        guides(fill = guide_colorbar(title = "Other Seats", barwidth = 20,
                                      label.theme = element_text(size = 24),
                                      title.theme = element_text(size = 24)))        
     }
@@ -230,6 +247,168 @@ server = function(input, output){
                                                                 vjust = 0.5),
                                      title.theme = element_text(hjust = 0.5,
                                                                 size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "LV"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "LosingVotes",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = "purple",
+                              limits = c(NA, maxLosing)) + 
+        guides(fill = guide_colorbar(title = "Total Losing \n Votes Cast", barwidth = 20,
+                                     label.theme = element_text(angle = 35,
+                                                                size = 24,
+                                                                vjust = 0.5),
+                                     title.theme = element_text(hjust = 0.5,
+                                                                size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "WiV"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "WinningVotes",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = party_colors[3],
+                              limits = c(NA, maxWinning)) + 
+        guides(fill = guide_colorbar(title = "Total Winning \n Votes Cast", barwidth = 20,
+                                     label.theme = element_text(angle = 35,
+                                                                size = 24,
+                                                                vjust = 0.5),
+                                     title.theme = element_text(hjust = 0.5,
+                                                                size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "EV"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "ExcessVotes",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = "purple",
+                              limits = c(NA, maxExcess)) + 
+        guides(fill = guide_colorbar(title = "Total Excess \n Votes Cast", barwidth = 20,
+                                     label.theme = element_text(angle = 35,
+                                                                size = 24,
+                                                                vjust = 0.5),
+                                     title.theme = element_text(hjust = 0.5,
+                                                                size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "WaV"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "WastedVotes",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = "purple",
+                              limits = c(NA, maxWasted)) + 
+        guides(fill = guide_colorbar(title = "Total Wasted \n Votes Cast", barwidth = 20,
+                                     label.theme = element_text(angle = 35,
+                                                                size = 24,
+                                                                vjust = 0.5),
+                                     title.theme = element_text(hjust = 0.5,
+                                                                size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "RWV"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "RepublicanWasted",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = party_colors[2],
+                              limits = c(NA, maxRWasted)) + 
+        guides(fill = guide_colorbar(title = "Total Wasted \n Rep. Votes", barwidth = 20,
+                                     label.theme = element_text(angle = 35,
+                                                                size = 24,
+                                                                vjust = 0.5),
+                                     title.theme = element_text(hjust = 0.5,
+                                                                size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "DWV"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "DemocratWasted",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = party_colors[1],
+                              limits = c(NA, maxDWasted)) + 
+        guides(fill = guide_colorbar(title = "Total Wasted \n Dem. Votes", barwidth = 20,
+                                     label.theme = element_text(angle = 35,
+                                                                size = 24,
+                                                                vjust = 0.5),
+                                     title.theme = element_text(hjust = 0.5,
+                                                                size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "RWVP"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "PercRepublicanWasted",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = party_colors[2],
+                              limits = c(0, 100)) + 
+        guides(fill = guide_colorbar(title = "% Wasted \n Rep. Votes", barwidth = 20,
+                                     label.theme = element_text(size = 24),
+                                     title.theme = element_text(size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "DWVP"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "PercDemocratWasted",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = party_colors[1],
+                              limits = c(0, 100)) + 
+        guides(fill = guide_colorbar(title = "% Wasted \n Dem. Votes", barwidth = 20,
+                                     label.theme = element_text(size = 24),
+                                     title.theme = element_text(size = 24))) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "PWV"){
+      myPlot = statebins_continuous(elections_state_year %>% dplyr::filter(Year == input$election), 
+                                    state_col = "State", 
+                                    value_col = "PercWasted",
+                                    text_color = "gray", 
+                                    font_size = 12, 
+                                    state_border_col = "white",
+                                    legend_position = "bottom")+ 
+        scale_fill_continuous(label = comma,
+                              low = "white", high = "purple",
+                              limits = c(0, 100)) + 
+        guides(fill = guide_colorbar(title = "% Wasted Votes", barwidth = 20,
+                                     label.theme = element_text(size = 24),
+                                     title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")
     }
     myPlot
