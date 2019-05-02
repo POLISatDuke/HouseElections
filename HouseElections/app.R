@@ -169,11 +169,7 @@ ui = dashboardPage(
   dashboardHeader(title = "U.S. House Elections"),
   
   dashboardSidebar(
-    
-    menuItem("Data Upload", tabName = "dataupload", icon = icon("file-upload")),
-    
-    menuItem("Visualization", tabName = "viz", icon = icon("chart-area"))
-    
+    sidebarMenuOutput("sidebar")
   ),
     
     dashboardBody(
@@ -207,35 +203,41 @@ ui = dashboardPage(
   
   server = function(input, output){
     
-    output$vizMenu = renderMenu(
+    output$sidebar = renderMenu(
       {
         sidebarMenu(
-          menuItem("Visualization Options", 
-            menusliderInput(inputId = "election",
-                            label = "Election Year ",
-                            min = min(elections_state_year$Year),
-                            max = max(elections_state_year$Year),
-                            value = max(elections_state_year$Year),
-                            step = 2,
-                            animate = TRUE,
-                            width = 380,
-                            sep = ""),
-            
-            radioButtons(inputId = "party",
-                         label = "Party:",
-                         choices = c("Democrat",
-                                     "Republican",
-                                     "All"),
-                         selected = "All"),
-            
-            radioButtons(inputId = "toPlot",
-                         label = "Color by:",
-                         choices = c("Losing Votes" = "LV",
-                                     "Winning Votes" = "WiV",
-                                     "Excess Votes" = "EV",
-                                     "Wasted Votes" = "WaV"),
-                         selected = "LV")
-          ))
+          id = "sidebarmenu",
+          menuItem("Data Upload", tabName = "dataupload", icon = icon("file-upload")),
+          
+          menuItem("Visualization", tabName = "viz", icon = icon("chart-area")),
+          
+          conditionalPanel("input.sidebarmenu === 'viz'",
+                           sliderInput(inputId = "election",
+                                       label = "Election Year ",
+                                       min = min(elections_state_year$Year),
+                                       max = max(elections_state_year$Year),
+                                       value = max(elections_state_year$Year),
+                                       step = 2,
+                                       animate = TRUE,
+                                       width = 380,
+                                       sep = ""),
+                           
+                           radioButtons(inputId = "party",
+                                        label = "Party:",
+                                        choices = c("Democrat",
+                                                    "Republican",
+                                                    "All"),
+                                        selected = "All"),
+                           
+                           radioButtons(inputId = "toPlot",
+                                        label = "Color by:",
+                                        choices = c("Losing Votes" = "LV",
+                                                    "Winning Votes" = "WiV",
+                                                    "Excess Votes" = "EV",
+                                                    "Wasted Votes" = "WaV"),
+                                        selected = "LV")
+          )
+        )
       }
     )
 
