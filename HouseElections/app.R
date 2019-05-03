@@ -263,10 +263,13 @@ statebins_coords = data.frame(
 # Set up App
 ui = dashboardPage(
   
-  dashboardHeader(title = "U.S. House Elections"),
+  dashboardHeader(
+    title = "U.S. House Elections"
+  ),
   
   dashboardSidebar(
-    sidebarMenuOutput("sidebar")
+    sidebarMenuOutput("sidebar"),
+    imageOutput("polisLogo")
   ),
   
   dashboardBody(
@@ -314,9 +317,20 @@ ui = dashboardPage(
         fluidRow(
           box(
             title = "District Results",
+            width = 12,
             height = 575,
             collapsible = TRUE,
             div(style = "overflow-x: scroll", dataTableOutput("click_info"))
+          )
+        )
+      ),
+      
+      tabItem(
+        tabName = "about",
+        h2("About"),
+        fluidRow(
+          box(
+            "asdf"
           )
         )
       )
@@ -325,6 +339,10 @@ ui = dashboardPage(
 )
 
 server = function(input, output){
+  
+  output$polisLogo = renderImage({
+    return(list(src = "./polis-logo.jpg", contentType = "image/jpg", alt = "Alignment", width = 230, height = 50))
+  }, deleteFile = FALSE)
   
   output$extraData = renderDataTable({
     infile = input$upload
@@ -454,7 +472,9 @@ server = function(input, output){
                         "Excess Votes" = "EV",
                         "Wasted Votes" = "WaV"),
             selected = "LV")
-        )
+        ),
+        
+        menuItem("About", tabName = "about", icon = icon("info-circle"))
       )
     }
   )
