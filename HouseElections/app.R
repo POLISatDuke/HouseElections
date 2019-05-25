@@ -124,89 +124,41 @@ elections_state_year = elections %>%
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
 
-elections = tibble(Year = 0,
-                   State = "0",
-                   District = 0,
-                   Democrat = 0,
-                   Republican = 0,
-                   Other = 0,
-                   Total = 0,
-                   Winner = "0",
-                   Dperc = 0,
-                   Rperc = 0,
-                   Operc = 0)
-for(i in seq(1, ncol(House_Elections), 12)){
-  this_year = House_Elections[,i:(i+10)]
-  names(this_year) = names(elections)
-  this_year = this_year %>%
-    filter(!is.na(Year),
-           !is.na(State),
-           !is.na(District),
-           !is.na(Democrat),
-           !is.na(Republican),
-           !is.na(Total),
-           !is.na(Winner),
-           !is.na(Dperc),
-           !is.na(Rperc),
-           !is.null(Year),
-           !is.null(State),
-           !is.null(District),
-           !is.null(Democrat),
-           !is.null(Republican),
-           !is.null(Total),
-           !is.null(Winner),
-           !is.null(Dperc),
-           !is.null(Rperc)) %>%
-    mutate(Other = case_when(
-      is.na(Other) | is.null(Other) ~ 0,
-      TRUE ~ as.numeric(Other)
-    )) %>%
-    mutate(Operc = case_when(
-      is.na(Operc) | is.null(Operc) ~ 0,
-      TRUE ~ as.numeric(Operc)
-    )) %>%
-    mutate(Dperc = as.numeric(Dperc)) %>%
-    mutate(Rperc = as.numeric(Rperc))
-  elections = rbind(elections, this_year)
-}
-elections = elections[-1,]
-write.csv(elections, "Data/house.csv", row.names = FALSE)
-
-# Sanity Checking
-uploadProblems = function(uploaded){
-  uploaded %>%
-    # Vote percentage inequality should be in same direction as vote count inequality
-    filter((Rperc>Dperc) != (Republican > Democrat) |
-             # Winner should be consistent with vote count/percentage inequality
-             Rperc>Dperc & Winner == "D" |
-             Republican>Democrat & Winner == "D" |
-             Rperc<Dperc & Winner == "R" |
-             Republican<Democrat & Winner == "R" |
-             # Zeros should match
-             (Rperc == 0) != (Republican == 0) | 
-             (Dperc == 0) != (Democrat == 0) |
-             # Percentages correct (within some margin)
-             !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
-             !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) | 
-             # Total Votes = Rep + Dem + Other votes
-             Total != Democrat + Republican + Other) %>%
-    mutate(problem_type = case_when(
-      (Rperc>Dperc) != (Republican > Democrat) ~ "Vote percent and Vote count show different winners",
-      # Winner should be consistent with vote count/percentage inequality
-      Rperc>Dperc & Winner == "D" |
-        Republican>Democrat & Winner == "D" |
-        Rperc<Dperc & Winner == "R" |
-        Republican<Democrat & Winner == "R"  ~ "Winner not consistent with vote count/percent",
-      # Zeros should match
-      (Rperc == 0) != (Republican == 0) | 
-        (Dperc == 0) != (Democrat == 0) ~ "Non-matching zeros",
-      # Percentages correct (within some margin)
-      !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
-        !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) ~ "Vote percentages off by more than 5%",
-      # Total Votes = Rep + Dem + Other votes
-      Total != Democrat + Republican + Other ~ "Total does not equal sum of party votes"
-    ))
-}
+# # Sanity Checking
+# uploadProblems = function(uploaded){
+#   uploaded %>%
+#     # Vote percentage inequality should be in same direction as vote count inequality
+#     filter((Rperc>Dperc) != (Republican > Democrat) |
+#              # Winner should be consistent with vote count/percentage inequality
+#              Rperc>Dperc & Winner == "D" |
+#              Republican>Democrat & Winner == "D" |
+#              Rperc<Dperc & Winner == "R" |
+#              Republican<Democrat & Winner == "R" |
+#              # Zeros should match
+#              (Rperc == 0) != (Republican == 0) | 
+#              (Dperc == 0) != (Democrat == 0) |
+#              # Percentages correct (within some margin)
+#              !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
+#              !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) | 
+#              # Total Votes = Rep + Dem + Other votes
+#              Total != Democrat + Republican + Other) %>%
+#     mutate(problem_type = case_when(
+#       (Rperc>Dperc) != (Republican > Democrat) ~ "Vote percent and Vote count show different winners",
+#       # Winner should be consistent with vote count/percentage inequality
+#       Rperc>Dperc & Winner == "D" |
+#         Republican>Democrat & Winner == "D" |
+#         Rperc<Dperc & Winner == "R" |
+#         Republican<Democrat & Winner == "R"  ~ "Winner not consistent with vote count/percent",
+#       # Zeros should match
+#       (Rperc == 0) != (Republican == 0) | 
+#         (Dperc == 0) != (Democrat == 0) ~ "Non-matching zeros",
+#       # Percentages correct (within some margin)
+#       !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
+#         !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) ~ "Vote percentages off by more than 5%",
+#       # Total Votes = Rep + Dem + Other votes
+#       Total != Democrat + Republican + Other ~ "Total does not equal sum of party votes"
+#     ))
+# }
 
 # Statebin Coordinates for clicks
 statebins_coords = data.frame(
@@ -217,7 +169,7 @@ statebins_coords = data.frame(
     
     "New Mexico", "Colorado", "Wyoming", "Montana",
     "Texas", "Oklahoma", "Kansas", "Nebraska", "South Dakota", "North Dakota",
-    "Louisiana", "Arizona", "Montana", "Iowa", "Minnesota",
+    "Louisiana", "Arkansas", "Montana", "Iowa", "Minnesota",
     
     "Mississippi", "Tennessee", "Kentucky", "Indiana", "Illinois", "Wisconsin",
     "Alabama", "North Carolina", "West Virginia", "Ohio", "Michigan",
@@ -268,50 +220,31 @@ ui = dashboardPage(
   ),
   
   dashboardSidebar(
-    sidebarMenuOutput("sidebar"),
-    imageOutput("polisLogo")
+    sidebarMenuOutput("sidebar")
   ),
   
   dashboardBody(
     tabItems(
       tabItem(
-        tabName = "dataupload",
-        h2("Data Upload"),
-        fluidRow(
-          box(
-            fileInput(
-              "upload", 
-              "Augment Data", 
-              accept = ".xlxs",
-              buttonLabel = "Browse...",
-              placeholder = "No file uploaded - Use 2018 Data"
-            ),
-            uiOutput("confirmbox")
-          )
-        ),
-        fluidRow(
-          uiOutput("problemBox")
-        ),
-        fluidRow(
-          box(
-            width = 12,
-            title = "Glimpse Data",
-            div(style = "overflow: scroll", dataTableOutput("extraData"))
-          )
-        )
-      ),
-      
-      tabItem(
         tabName = "viz",
-        h2("U.S. House Elections"),
+        fluidRow(
+          box(
+            h2("U.S. House Elections"),
+            width = 7, height = 85
+          ),
+          box(
+            imageOutput("polisLogo"),
+            align = "center",
+            width = 5, height = 85
+          )
+        ),
         fluidRow(
           box(
             plotOutput("map", height = 550, click = clickOpts(id = "plot_click")), 
             width = 7, height = 575),
           box(
             div(htmlOutput("state_info")),
-            height = 575,
-            width = 5)
+            width = 5, height = 575)
         ),
         
         fluidRow(
@@ -327,11 +260,19 @@ ui = dashboardPage(
       
       tabItem(
         tabName = "about",
-        h2("About"),
         fluidRow(
           box(
-            "asdf"
+            h2("About the App"),
+            width = 7, height = 85
+          ),
+          box(
+            imageOutput("polisLogo2"),
+            align = "center",
+            width = 5, height = 85
           )
+        ),
+        fluidRow(
+          
         )
       )
     )
@@ -341,105 +282,18 @@ ui = dashboardPage(
 server = function(input, output){
   
   output$polisLogo = renderImage({
-    return(list(src = "./polis-logo.jpg", contentType = "image/jpg", alt = "Alignment", width = 230, height = 50))
+    return(list(src = "./polis-logo.jpg", contentType = "image/jpg", alt = "Alignment", width = 300, height = 60))
   }, deleteFile = FALSE)
   
-  output$extraData = renderDataTable({
-    infile = input$upload
-    if(is.null(infile)){
-      return(NULL)
-    }
-    upload = read_excel(infile$datapath)
-    parsed = tibble(
-      Year = 0,
-      State = "0",
-      District = 0,
-      Democrat = 0,
-      Republican = 0,
-      Other = 0,
-      Total = 0,
-      Winner = "0",
-      Dperc = 0,
-      Rperc = 0,
-      Operc = 0)
-    for(i in seq(1, ncol(upload), 12)){
-      this_year = upload[,i:(i+10)]
-      names(this_year) = names(parsed)
-      this_year = this_year %>%
-        filter(
-          !is.na(Year),
-          !is.na(State),
-          !is.na(District),
-          !is.na(Democrat),
-          !is.na(Republican),
-          !is.na(Total),
-          !is.na(Winner),
-          !is.na(Dperc),
-          !is.na(Rperc),
-          !is.null(Year),
-          !is.null(State),
-          !is.null(District),
-          !is.null(Democrat),
-          !is.null(Republican),
-          !is.null(Total),
-          !is.null(Winner),
-          !is.null(Dperc),
-          !is.null(Rperc)) %>%
-        mutate(
-          Other = case_when(
-            is.na(Other) | is.null(Other) ~ 0,
-            TRUE ~ as.numeric(Other)
-          )) %>%
-        mutate(
-          Operc = case_when(
-            is.na(Operc) | is.null(Operc) ~ 0,
-            TRUE ~ as.numeric(Operc)
-          )) %>%
-        mutate(Dperc = as.numeric(Dperc)) %>%
-        mutate(Rperc = as.numeric(Rperc))
-      parsed = rbind(parsed, this_year)
-    }
-    parsed = parsed[-1,]
-    output$problemBox = renderUI({
-      p = uploadProblems(parsed)
-      if(nrow(p) > 0){
-        fluidRow(
-          box(
-            width = 12,
-            title = "Problems Detected",
-            renderDataTable({
-              p
-            },
-            options = list(
-              pageLength = 10,
-              searching = FALSE
-            ))
-          )
-        )
-      } else {
-        fluidRow(
-          box(
-            title = "No Problems Detected"
-          )
-        )
-      }
-      
-      
-    })
-    parsed
-  },     
-  options = list(
-    pageLength = 10,
-    searching = FALSE
-  ))
-  
-  output$confirmbox = NULL # TO DO
+  output$polisLogo2 = renderImage({
+    return(list(src = "./polis-logo.jpg", contentType = "image/jpg", alt = "Alignment", width = 300, height = 60))
+  }, deleteFile = FALSE)
   
   output$sidebar = renderMenu(
     {
       sidebarMenu(
         id = "sidebarmenu",
-        menuItem("Data Upload", tabName = "dataupload", icon = icon("file-upload")),
+        #menuItem("Data Upload", tabName = "dataupload", icon = icon("file-upload")),
         
         menuItem("Representation by State", tabName = "viz", icon = icon("chart-area")),
         
@@ -480,6 +334,64 @@ server = function(input, output){
   )
   
   output$map = renderPlot({
+    #infile = input$upload
+    # if(!is.null(infile)){
+    #   upload = read_excel(infile$datapath)
+    #   parsed = tibble(
+    #     Year = 0,
+    #     State = "0",
+    #     District = 0,
+    #     Democrat = 0,
+    #     Republican = 0,
+    #     Other = 0,
+    #     Total = 0,
+    #     Winner = "0",
+    #     Dperc = 0,
+    #     Rperc = 0,
+    #     Operc = 0)
+    #   for(i in seq(1, ncol(upload), 12)){
+    #     this_year = upload[,i:(i+10)]
+    #     names(this_year) = names(parsed)
+    #     this_year = this_year %>%
+    #       filter(
+    #         !is.na(Year),
+    #         !is.na(State),
+    #         !is.na(District),
+    #         !is.na(Democrat),
+    #         !is.na(Republican),
+    #         !is.na(Total),
+    #         !is.na(Winner),
+    #         !is.na(Dperc),
+    #         !is.na(Rperc),
+    #         !is.null(Year),
+    #         !is.null(State),
+    #         !is.null(District),
+    #         !is.null(Democrat),
+    #         !is.null(Republican),
+    #         !is.null(Total),
+    #         !is.null(Winner),
+    #         !is.null(Dperc),
+    #         !is.null(Rperc)) %>%
+    #       mutate(
+    #         Other = case_when(
+    #           is.na(Other) | is.null(Other) ~ 0,
+    #           TRUE ~ as.numeric(Other)
+    #         )) %>%
+    #       mutate(
+    #         Operc = case_when(
+    #           is.na(Operc) | is.null(Operc) ~ 0,
+    #           TRUE ~ as.numeric(Operc)
+    #         )) %>%
+    #       mutate(Dperc = as.numeric(Dperc)) %>%
+    #       mutate(Rperc = as.numeric(Rperc))
+    #     parsed = rbind(parsed, this_year)
+    #   }
+    # parsed = parsed[-1,]
+    # parsed = parsed %>% filter(Year > max(elections$Year))
+    # elections_updated = rbind(elections, parsed)
+    # } else {
+    #   elections_updated = elections
+    # }
     ### Subset and manipulate data for this year
     this_year = elections_state_year %>%
       dplyr::filter(Year == input$election)
