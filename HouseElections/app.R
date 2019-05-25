@@ -437,7 +437,7 @@ server = function(input, output){
           limits = c(0, 100)
         ) + 
         guides(
-          fill = guide_colorbar(title = "Percent Democrat Votes for \nLosing Candidates", barwidth = 20,
+          fill = guide_colorbar(title = "Percent Democratic Votes for \nLosing Candidates", barwidth = 20,
                                 label.theme = element_text(size = 24),
                                 title.theme = element_text(size = 24))
         ) + 
@@ -505,7 +505,7 @@ server = function(input, output){
           limits = c(0, 100)
         ) + 
         guides(fill = guide_colorbar(
-          title = "Percent Democrat Votes for \nWinning Candidates", barwidth = 20,
+          title = "Percent Democratic Votes for \nWinning Candidates", barwidth = 20,
           label.theme = element_text(size = 24),
           title.theme = element_text(size = 24))
         ) + 
@@ -574,7 +574,7 @@ server = function(input, output){
         ) + 
         guides(
           fill = guide_colorbar(
-            title = "Percent of Excess \nDemocrat Votes", barwidth = 20,
+            title = "Percent of Excess \nDemocratic Votes", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))
         ) + 
@@ -619,7 +619,7 @@ server = function(input, output){
         ) + 
         guides(
           fill = guide_colorbar(
-            title = "Percent \'Wasted\' \nDemocrat Votes", barwidth = 20,
+            title = "Percent \'Wasted\' \nDemocratic Votes", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))
         ) + 
@@ -696,13 +696,13 @@ server = function(input, output){
           "<font size = \"+2\">",
           nearestState, "<br/>",
           "Total Votes:", as.character(stateInfo$total), "<br/>",
-          "% Democrat Votes:", as.character(round(stateInfo$DVotes/stateInfo$Total * 100, 2)), "<br/>",
-          "% Democrat Seats:", as.character(round(stateInfo$D/stateInfo$Reps * 100, 2)), "<br/>",
+          "% Democratic Votes:", as.character(round(stateInfo$DVotes/stateInfo$Total * 100, 2)), "<br/>",
+          "% Democratic Seats:", as.character(round(stateInfo$D/stateInfo$Reps * 100, 2)), "<br/>",
           "% \'Wasted\' Votes:", as.character(round(stateInfo$PercWasted, 2)), "<br/>",
           "Ratio (D Votes:Seats):", as.character(round(stateInfo$DVotes / stateInfo$Total / stateInfo$D * stateInfo$Reps, 4)), "<br/>",
           "</font> <br/>",
           "<font size = \"-1\"> A ratio of 1 means the distribution of votes perfectly matches the distribution of seats. <br/>
-          A ratio < 1 means the proportion of Democrat seats is greater than the proportion of Democrat votes. <br/>
+          A ratio < 1 means the proportion of Democratic seats is greater than the proportion of Democrat votes. <br/>
           A ratio > 1 means the proportion of Republican seats is greater than the proportion of Republican votes. <br/> </font>"
         )
       )
