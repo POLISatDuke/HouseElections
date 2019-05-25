@@ -124,42 +124,6 @@ elections_state_year = elections %>%
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
 
-# # Sanity Checking
-# uploadProblems = function(uploaded){
-#   uploaded %>%
-#     # Vote percentage inequality should be in same direction as vote count inequality
-#     filter((Rperc>Dperc) != (Republican > Democrat) |
-#              # Winner should be consistent with vote count/percentage inequality
-#              Rperc>Dperc & Winner == "D" |
-#              Republican>Democrat & Winner == "D" |
-#              Rperc<Dperc & Winner == "R" |
-#              Republican<Democrat & Winner == "R" |
-#              # Zeros should match
-#              (Rperc == 0) != (Republican == 0) | 
-#              (Dperc == 0) != (Democrat == 0) |
-#              # Percentages correct (within some margin)
-#              !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
-#              !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) | 
-#              # Total Votes = Rep + Dem + Other votes
-#              Total != Democrat + Republican + Other) %>%
-#     mutate(problem_type = case_when(
-#       (Rperc>Dperc) != (Republican > Democrat) ~ "Vote percent and Vote count show different winners",
-#       # Winner should be consistent with vote count/percentage inequality
-#       Rperc>Dperc & Winner == "D" |
-#         Republican>Democrat & Winner == "D" |
-#         Rperc<Dperc & Winner == "R" |
-#         Republican<Democrat & Winner == "R"  ~ "Winner not consistent with vote count/percent",
-#       # Zeros should match
-#       (Rperc == 0) != (Republican == 0) | 
-#         (Dperc == 0) != (Democrat == 0) ~ "Non-matching zeros",
-#       # Percentages correct (within some margin)
-#       !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
-#         !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) ~ "Vote percentages off by more than 5%",
-#       # Total Votes = Rep + Dem + Other votes
-#       Total != Democrat + Republican + Other ~ "Total does not equal sum of party votes"
-#     ))
-# }
-
 # Statebin Coordinates for clicks
 statebins_coords = data.frame(
   State = c(
@@ -230,6 +194,7 @@ ui = dashboardPage(
         fluidRow(
           box(
             h2("U.S. House Elections"),
+            align = "center",
             width = 7, height = 85
           ),
           box(
@@ -263,6 +228,7 @@ ui = dashboardPage(
         fluidRow(
           box(
             h2("About the App"),
+            align = "center",
             width = 7, height = 85
           ),
           box(
@@ -334,64 +300,6 @@ server = function(input, output){
   )
   
   output$map = renderPlot({
-    #infile = input$upload
-    # if(!is.null(infile)){
-    #   upload = read_excel(infile$datapath)
-    #   parsed = tibble(
-    #     Year = 0,
-    #     State = "0",
-    #     District = 0,
-    #     Democrat = 0,
-    #     Republican = 0,
-    #     Other = 0,
-    #     Total = 0,
-    #     Winner = "0",
-    #     Dperc = 0,
-    #     Rperc = 0,
-    #     Operc = 0)
-    #   for(i in seq(1, ncol(upload), 12)){
-    #     this_year = upload[,i:(i+10)]
-    #     names(this_year) = names(parsed)
-    #     this_year = this_year %>%
-    #       filter(
-    #         !is.na(Year),
-    #         !is.na(State),
-    #         !is.na(District),
-    #         !is.na(Democrat),
-    #         !is.na(Republican),
-    #         !is.na(Total),
-    #         !is.na(Winner),
-    #         !is.na(Dperc),
-    #         !is.na(Rperc),
-    #         !is.null(Year),
-    #         !is.null(State),
-    #         !is.null(District),
-    #         !is.null(Democrat),
-    #         !is.null(Republican),
-    #         !is.null(Total),
-    #         !is.null(Winner),
-    #         !is.null(Dperc),
-    #         !is.null(Rperc)) %>%
-    #       mutate(
-    #         Other = case_when(
-    #           is.na(Other) | is.null(Other) ~ 0,
-    #           TRUE ~ as.numeric(Other)
-    #         )) %>%
-    #       mutate(
-    #         Operc = case_when(
-    #           is.na(Operc) | is.null(Operc) ~ 0,
-    #           TRUE ~ as.numeric(Operc)
-    #         )) %>%
-    #       mutate(Dperc = as.numeric(Dperc)) %>%
-    #       mutate(Rperc = as.numeric(Rperc))
-    #     parsed = rbind(parsed, this_year)
-    #   }
-    # parsed = parsed[-1,]
-    # parsed = parsed %>% filter(Year > max(elections$Year))
-    # elections_updated = rbind(elections, parsed)
-    # } else {
-    #   elections_updated = elections
-    # }
     ### Subset and manipulate data for this year
     this_year = elections_state_year %>%
       dplyr::filter(Year == input$election)
