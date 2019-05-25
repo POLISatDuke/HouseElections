@@ -133,7 +133,7 @@ statebins_coords = data.frame(
     
     "New Mexico", "Colorado", "Wyoming", "Montana",
     "Texas", "Oklahoma", "Kansas", "Nebraska", "South Dakota", "North Dakota",
-    "Louisiana", "Arkansas", "Montana", "Iowa", "Minnesota",
+    "Louisiana", "Arkansas", "Missouri", "Iowa", "Minnesota",
     
     "Mississippi", "Tennessee", "Kentucky", "Indiana", "Illinois", "Wisconsin",
     "Alabama", "North Carolina", "West Virginia", "Ohio", "Michigan",
