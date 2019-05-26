@@ -71,26 +71,38 @@ elections = elections %>%
       (Democrat - SecondPlaceVotes) * as.numeric(Winner == "D"),
     DemocratWastedP = 
       DemocratWasted / Democrat,
+    OtherWasted = 
+      Other                      * as.numeric(Winner != "O") + 
+      (Other - SecondPlaceVotes) * as.numeric(Winner == "O"),
+    OtherWastedP = 
+      OtherWasted / Other,
     DemocratLosing = 
       Democrat * as.numeric(Winner != "D"),
     RepublicanLosing = 
       Republican * as.numeric(Winner != "R"),
+    OtherLosing =
+      Other * as.numeric(Winner != "O"),
     DemocratWinning = 
       Democrat * as.numeric(Winner == "D"),
     RepublicanWinning = 
       Republican * as.numeric(Winner == "R"),
+    OtherWinning =
+      Other * as.numeric(Winner == "O"),
     DemocratExcess = 
       (Democrat - SecondPlaceVotes) * as.numeric(Winner == "D"),
     RepublicanExcess = 
-      (Republican - SecondPlaceVotes) * as.numeric(Winner == "R"))
+      (Republican - SecondPlaceVotes) * as.numeric(Winner == "R"),
+    OtherExcess =
+      (Other - SecondPlaceVotes) * as.numeric(Winner == "O"))
 elections_state_year = elections %>%
   group_by(State, Year) %>%
   summarize(
     R                 = sum(Winner == "R"),
     D                 = sum(Winner == "D"),
+    O                 = sum(Winner == "O"),
     total             = as.numeric(sum(Total)),
     DemSurplus        = D - R,
-    Reps              = D + R,
+    Reps              = D + R + O,
     RVotes            = sum(Republican),
     DVotes            = sum(Democrat),
     OVotes            = sum(Other),
@@ -100,22 +112,30 @@ elections_state_year = elections %>%
     WastedVotes       = sum(WastedVotes),
     RepublicanWasted  = sum(RepublicanWasted),
     DemocratWasted    = sum(DemocratWasted),
+    OtherWasted       = sum(OtherWasted),
     RepublicanLosing  = sum(RepublicanLosing),
     DemocratLosing    = sum(DemocratLosing),
+    OtherLosing       = sum(OtherLosing),
     RepublicanWinning = sum(RepublicanWinning),
     DemocratWinning   = sum(DemocratWinning),
+    OtherWinning      = sum(OtherWinning),
     DemocratExcess    = sum(DemocratExcess),
-    RepublicanExcess  = sum(RepublicanExcess)) %>% 
+    RepublicanExcess  = sum(RepublicanExcess),
+    OtherExcess       = sum(OtherExcess)) %>% 
   mutate(
     PercWasted             = WastedVotes / total * 100,
     PercRepublicanWasted   = RepublicanWasted / RVotes * 100,
     PercDemocratWasted     = DemocratWasted / DVotes * 100,
+    PercOtherWasted        = OtherWasted / OVotes * 100,
     PercRepublicanLosing   = RepublicanLosing / RVotes * 100,
     PercDemocratLosing     = DemocratLosing / DVotes * 100,
+    PercOtherLosing        = OtherLosing / OVotes * 100,
     PercRepublicanWinning  = RepublicanWinning / RVotes * 100,
     PercDemocratWinning    = DemocratWinning / DVotes * 100,
+    PercOtherWinning       = OtherWinning / OVotes * 100,
     PercDemocratExcess     = DemocratExcess / DVotes * 100,
-    PercRepublicanExcess   = RepublicanExcess/ RVotes * 100)
+    PercRepublicanExcess   = RepublicanExcess/ RVotes * 100,
+    PercOtherExcess        = OtherExcess / OVotes * 100)
 # Binning by state and year
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
