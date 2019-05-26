@@ -21,7 +21,7 @@ congress_to_election = function(congress){
 }
 
 ### Various handy objects
-# Hex color codes for Dem Blue and Rep Red
+# Hex color codes for Dem Blue and Rep Red, Plus a Gold Color for Independents/Etc.
 party_colors <- c("#2E74C0", "#CB454A", "#F0E060")
 
 ### Data load
@@ -320,6 +320,11 @@ server = function(input, output){
     this_year = elections_state_year %>%
       dplyr::filter(Year == input$election)
     
+    # Color choices: All plots use a single color gradient. 
+    # If a major party is selected, gradient is white to their color.
+    # All is white to Purple, and Other is white to gold.
+    
+    
     ### Plotting Options
     if(input$toPlot == "LV" & input$party == "All"){
       myPlot = statebins_continuous(
@@ -338,14 +343,14 @@ server = function(input, output){
         ) + 
         guides(
           fill = guide_colorbar(
-            title = "Percent Votes for \nLosing Candidates", barwidth = 20,
+            title = "Percent Votes \nfor Losing Candidates", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))
         ) + 
         theme(legend.position = "bottom")
     }
     
-    if(input$toPlot == "LV" & input$party == "Democrat"){
+    if(input$toPlot == "LV" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -357,11 +362,11 @@ server = function(input, output){
       ) + 
         scale_fill_continuous(
           label = comma,
-          low = "white", high = "purple",
+          low = "white", high = party_colors[1],
           limits = c(0, 100)
         ) + 
         guides(
-          fill = guide_colorbar(title = "Percent Democratic Votes for \nLosing Candidates", barwidth = 20,
+          fill = guide_colorbar(title = "Percent Democratic Votes \nfor Losing Candidates", barwidth = 20,
                                 label.theme = element_text(size = 24),
                                 title.theme = element_text(size = 24))
         ) + 
@@ -379,12 +384,35 @@ server = function(input, output){
       )+ 
         scale_fill_continuous(
           label = comma,
-          low = "white", high = "purple",
+          low = "white", high = party_colors[2],
           limits = c(0, 100)
         ) + 
         guides(
           fill = guide_colorbar(
-            title = "Percent Republican Votes for \nLosing Candidates", barwidth = 20,
+            title = "Percent Republican Votes \nfor Losing Candidates", barwidth = 20,
+            label.theme = element_text(size = 24),
+            title.theme = element_text(size = 24))
+        ) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "LV" & input$party == "Independent"){
+      myPlot = statebins_continuous(
+        elections_state_year %>% dplyr::filter(Year == input$election), 
+        state_col = "State", 
+        value_col = "PercOtherLosing",
+        text_color = "gray", 
+        font_size = 10, 
+        state_border_col = "white",
+        legend_position = "bottom"
+      )+ 
+        scale_fill_continuous(
+          label = comma,
+          low = "white", high = party_colors[3],
+          limits = c(0, 100)
+        ) + 
+        guides(
+          fill = guide_colorbar(
+            title = "Percent Independent Votes \nfor Losing Candidates", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))
         ) + 
@@ -402,18 +430,18 @@ server = function(input, output){
       ) + 
         scale_fill_continuous(
           label = comma,
-          low = "white", high = party_colors[3],
+          low = "white", high = "purple",
           limits = c(0, 100)
         ) + 
         guides(
           fill = guide_colorbar(
-            title = "Percent Votes for \nWinning Candidates", barwidth = 20,
+            title = "Percent Votes \nfor Winning Candidates", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))
         ) + 
         theme(legend.position = "bottom")
     }
-    if(input$toPlot == "WiV" & input$party == "Democrat"){
+    if(input$toPlot == "WiV" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -425,11 +453,11 @@ server = function(input, output){
       ) + 
         scale_fill_continuous(
           label = comma,
-          low = "white", high = party_colors[3],
+          low = "white", high = party_colors[1],
           limits = c(0, 100)
         ) + 
         guides(fill = guide_colorbar(
-          title = "Percent Democratic Votes for \nWinning Candidates", barwidth = 20,
+          title = "Percent Democratic Votes \nfor Winning Candidates", barwidth = 20,
           label.theme = element_text(size = 24),
           title.theme = element_text(size = 24))
         ) + 
@@ -447,12 +475,35 @@ server = function(input, output){
       ) + 
         scale_fill_continuous(
           label = comma,
+          low = "white", high = party_colors[2],
+          limits = c(0, 100)
+        ) + 
+        guides(
+          fill = guide_colorbar(
+            title = "Percent Republican Votes \nfor Winning Candidates", barwidth = 20,
+            label.theme = element_text(size = 24),
+            title.theme = element_text(size = 24))
+        ) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "WiV" & input$party == "Independent"){
+      myPlot = statebins_continuous(
+        elections_state_year %>% dplyr::filter(Year == input$election), 
+        state_col = "State", 
+        value_col = "PercOtherWinning",
+        text_color = "gray", 
+        font_size = 10, 
+        state_border_col = "white",
+        legend_position = "bottom"
+      ) + 
+        scale_fill_continuous(
+          label = comma,
           low = "white", high = party_colors[3],
           limits = c(0, 100)
         ) + 
         guides(
           fill = guide_colorbar(
-            title = "Percent Republican Votes for \nWinning Candidates", barwidth = 20,
+            title = "Percent Independent Votes \nfor Winning Candidates", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))
         ) + 
@@ -481,7 +532,7 @@ server = function(input, output){
         ) + 
         theme(legend.position = "bottom")
     }
-    if(input$toPlot == "EV" & input$party == "Democrat"){
+    if(input$toPlot == "EV" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -493,7 +544,7 @@ server = function(input, output){
       ) + 
         scale_fill_continuous(
           label = comma,
-          low = "white", high = "purple",
+          low = "white", high = party_colors[1],
           limits = c(0, 100)
         ) + 
         guides(
@@ -516,7 +567,7 @@ server = function(input, output){
       ) + 
         scale_fill_continuous(
           label = comma,
-          low = "white", high = "purple",
+          low = "white", high = party_colors[2],
           limits = c(0, 100)
         ) + 
         guides(fill = guide_colorbar(
@@ -526,7 +577,29 @@ server = function(input, output){
         ) + 
         theme(legend.position = "bottom")
     }
-    if(input$toPlot == "WaV" & input$party == "Democrat"){
+    if(input$toPlot == "EV" & input$party == "Independent"){
+      myPlot = statebins_continuous(
+        elections_state_year %>% dplyr::filter(Year == input$election), 
+        state_col = "State", 
+        value_col = "PercOtherExcess",
+        text_color = "gray", 
+        font_size = 10, 
+        state_border_col = "white",
+        legend_position = "bottom"
+      ) + 
+        scale_fill_continuous(
+          label = comma,
+          low = "white", high = party_colors[2],
+          limits = c(0, 100)
+        ) + 
+        guides(fill = guide_colorbar(
+          title = "Percent of Excess \nIndependent Votes", barwidth = 20,
+          label.theme = element_text(size = 24),
+          title.theme = element_text(size = 24))
+        ) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "WaV" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -561,7 +634,7 @@ server = function(input, output){
       ) + 
         scale_fill_continuous(
           label = comma,
-          low = "white", high = party_colors[1],
+          low = "white", high = party_colors[2],
           limits = c(0, 100)
         ) + 
         guides(
@@ -589,7 +662,30 @@ server = function(input, output){
         ) + 
         guides(
           fill = guide_colorbar(
-            title = "Percent \'Wasted\' Votes", barwidth = 20,
+            title = "Percent \'Wasted\' \nVotes", barwidth = 20,
+            label.theme = element_text(size = 24),
+            title.theme = element_text(size = 24))
+        ) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "WaV" & input$party == "Independent"){
+      myPlot = statebins_continuous(
+        elections_state_year %>% dplyr::filter(Year == input$election), 
+        state_col = "State", 
+        value_col = "PercOtherWasted",
+        text_color = "gray", 
+        font_size = 10, 
+        state_border_col = "white",
+        legend_position = "bottom"
+      ) + 
+        scale_fill_continuous(
+          label = comma,
+          low = "white", high = party_colors[3],
+          limits = c(0, 100)
+        ) + 
+        guides(
+          fill = guide_colorbar(
+            title = "Percent \'Wasted\' \nIndependent Votes", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))
         ) + 
