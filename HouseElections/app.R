@@ -3,7 +3,6 @@ library(readxl)
 library(tidyverse)
 library(shinydashboard)
 library(readr)
-library(fiftystater)
 library(scales)
 library(statebins)
 
@@ -25,12 +24,9 @@ congress_to_election = function(congress){
 # Hex color codes for Dem Blue and Rep Red
 party_colors <- c("#2E74C0", "#CB454A", "#F0E060")
 
-# US state boundaries
-data("fifty_states")
-
 ### Data load
 # Removes parsing failures (mistakes in data formatting)
-elections   = read_csv("./Data/house.csv")
+elections = read_csv("./Data/house.csv")
 
 # For each district, calculate # of voters who voted for winning candidates, losing candidates, and second-place candidates
 # Using these calculate how many kinds of "wasted" votes there are; votes in excess of second place or for losing candidates
@@ -259,7 +255,6 @@ server = function(input, output){
     {
       sidebarMenu(
         id = "sidebarmenu",
-        #menuItem("Data Upload", tabName = "dataupload", icon = icon("file-upload")),
         
         menuItem("Representation by State", tabName = "viz", icon = icon("chart-area")),
         
@@ -278,20 +273,21 @@ server = function(input, output){
           
           radioButtons(
             inputId = "party",
-            label = "Party:",
-            choices = c("Democrat",
+            label = "Major Party:",
+            choices = c("Democratic",
                         "Republican",
+                        "Independent",
                         "All"),
             selected = "All"),
           
           radioButtons(
             inputId = "toPlot",
             label = "Color by:",
-            choices = c("Losing Votes" = "LV",
-                        "Winning Votes" = "WiV",
+            choices = c("Winning Votes" = "WiV",
+                        "Losing Votes" = "LV",
                         "Excess Votes" = "EV",
                         "Wasted Votes" = "WaV"),
-            selected = "LV")
+            selected = "WiV")
         ),
         
         menuItem("About", tabName = "about", icon = icon("info-circle"))
@@ -303,7 +299,6 @@ server = function(input, output){
     ### Subset and manipulate data for this year
     this_year = elections_state_year %>%
       dplyr::filter(Year == input$election)
-    this_year_sp = left_join(fifty_states, this_year)
     
     ### Plotting Options
     if(input$toPlot == "LV" & input$party == "All"){
@@ -329,6 +324,7 @@ server = function(input, output){
         ) + 
         theme(legend.position = "bottom")
     }
+    
     if(input$toPlot == "LV" & input$party == "Democrat"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
