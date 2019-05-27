@@ -39,43 +39,44 @@ elections = elections %>%
         Democrat > Republican   & Republican > Other     ~ Democrat - Republican,
         Democrat > Other        & Other > Republican     ~ Democrat - Other,
         Other > Democrat        & Democrat > Republican  ~ Other - Democrat,
-        Other > Republican      & Republican > Democrat  ~ Other - Republican
+        Other > Republican      & Republican > Democrat  ~ Other - Republican,
+        TRUE ~ 0
       ),
     LosingVotes = 
       Republican   * as.numeric(Winner != "R") + 
       Democrat     * as.numeric(Winner != "D") + 
       Other        * as.numeric(Winner != "O"),
-    LosingP = 
-      LosingVotes / Total,
+    LosingPerc = 
+      (LosingVotes / Total) * 100,
     WinningVotes =
       Republican   * as.numeric(Winner == "R") +
       Democrat     * as.numeric(Winner == "D") +
       Other        * as.numeric(Winner == "O"),
-    WinningP = 
-      WinningVotes / Total,
+    WinningPerc = 
+      (WinningVotes / Total) * 100,
     ExcessVotes = 
       WinningVotes - SecondPlaceVotes,
-    ExcessP = 
-      WinningP / Total,
+    ExcessPerc = 
+      WinningPerc - LosingPerc,
     WastedVotes = 
       ExcessVotes + LosingVotes,
-    WastedP = 
-      WastedVotes / Total,
+    WastedPerc = 
+      (WastedVotes / Total) * 100,
     RepublicanWasted = 
       Republican                      * as.numeric(Winner != "R") + 
       (Republican - SecondPlaceVotes) * as.numeric(Winner == "R"),
-    RepublicanWastedP = 
-      RepublicanWasted / Republican,
+    RepublicanWastedPerc = 
+      RepublicanWasted / Republican * 100,
     DemocratWasted = 
       Democrat                      * as.numeric(Winner != "D") + 
       (Democrat - SecondPlaceVotes) * as.numeric(Winner == "D"),
-    DemocratWastedP = 
-      DemocratWasted / Democrat,
+    DemocratWastedPerc = 
+      (DemocratWasted / Democrat) * 100,
     OtherWasted = 
       Other                      * as.numeric(Winner != "O") + 
       (Other - SecondPlaceVotes) * as.numeric(Winner == "O"),
-    OtherWastedP = 
-      OtherWasted / Other,
+    OtherWastedPerc = 
+      OtherWasted / Other * 100,
     DemocratLosing = 
       Democrat * as.numeric(Winner != "D"),
     RepublicanLosing = 
@@ -136,6 +137,9 @@ elections_state_year = elections %>%
     PercDemocratExcess     = DemocratExcess / DVotes * 100,
     PercRepublicanExcess   = RepublicanExcess/ RVotes * 100,
     PercOtherExcess        = OtherExcess / OVotes * 100)
+# Following is not useless line - coerces NaNs to NAs which behave better in statebin
+elections_state_year[is.na(elections_state_year)] = NA
+elections_state_year = elections_state_year %>% complete(State, Year)
 # Binning by state and year
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
