@@ -95,12 +95,14 @@ elections = elections %>%
       (Republican - SecondPlaceVotes) * as.numeric(Winner == "R"),
     OtherExcess =
       (Other - SecondPlaceVotes) * as.numeric(Winner == "O"))
+
+# Binning by state and year
 elections_state_year = elections %>%
   group_by(State, Year) %>%
   summarize(
     R                 = sum(Winner == "R"),
     D                 = sum(Winner == "D"),
-    O                 = sum(Winner == "O"),
+    O                 = sum(Winner == "I"),
     total             = as.numeric(sum(Total)),
     DemSurplus        = D - R,
     Reps              = D + R + O,
@@ -140,7 +142,9 @@ elections_state_year = elections %>%
 # Following is not useless line - coerces NaNs to NAs which behave better in statebin
 elections_state_year[is.na(elections_state_year)] = NA
 elections_state_year = elections_state_year %>% complete(State, Year)
-# Binning by state and year
+# Complete States/Years combinations - otherwise missing in data means missing in chart
+
+
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
 
@@ -306,7 +310,7 @@ server = function(input, output){
           
           radioButtons(
             inputId = "toPlot",
-            label = "Color by:",
+            label = "Fill Criterion (%):",
             choices = c("Winning Votes" = "WiV",
                         "Losing Votes" = "LV",
                         "Excess Votes" = "EV",
@@ -344,13 +348,13 @@ server = function(input, output){
           label = comma,
           low = "white", high = "purple",
           limits = c(0, 100)
-        ) + 
+        ) +
         guides(
           fill = guide_colorbar(
             title = "Percent Votes \nfor Losing Candidates", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))
-        ) + 
+        ) +
         theme(legend.position = "bottom")
     }
     
@@ -715,6 +719,7 @@ server = function(input, output){
       filter(State == nearestState,
              Year == input$election)
     if(!is.na(nearestState)){
+      # Change this
       HTML(
         paste(
           "<font size = \"+2\">",
