@@ -2,7 +2,7 @@
 
 library(readxl)
 library(dplyr)
-House_Elections = read_excel("Data/House Elections.xlsx")
+House_Elections = read_excel("./HouseElections/Data/House Elections.xlsx")
 elections = tibble(Year = 0,
                         State = "0",
                         District = 0,
@@ -46,45 +46,30 @@ for(i in seq(1, ncol(House_Elections), 12)){
     )) %>%
     mutate(Dperc = as.numeric(Dperc)) %>%
     mutate(Rperc = as.numeric(Rperc))
-  print(this_year[1,1])
-  print(warnings())
+#  print(this_year[1,1])
+#  print(warnings())
   elections = rbind(elections, this_year)
 }
 elections = elections[-1,]
-write.csv(elections, "Data/house.csv", row.names = FALSE)
+write.csv(elections, "./HouseElections/Data/house.csv", row.names = FALSE)
 
 # Sanity Checking
 problems = elections %>%
-  # Vote percentage inequality should be in same direction as vote count inequality
-  filter((Rperc>Dperc) != (Republican > Democrat) |
-           # Winner should be consistent with vote count/percentage inequality
-           Rperc>Dperc & Winner == "D" |
-           Republican>Democrat & Winner == "D" |
-           Rperc<Dperc & Winner == "R" |
-           Republican<Democrat & Winner == "R" |
-           # Zeros should match
-           (Rperc == 0) != (Republican == 0) | 
-           (Dperc == 0) != (Democrat == 0) |
-           # Percentages correct (within some margin)
-           !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
-           !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) | 
-           # Total Votes = Rep + Dem + Other votes
-           Total != Democrat + Republican + Other) %>%
   mutate(problem_type = case_when(
-    (Rperc>Dperc) != (Republican > Democrat) ~ "Vote percent and Vote count show different winners",
-      # Winner should be consistent with vote count/percentage inequality
-      Rperc>Dperc & Winner == "D" |
-      Republican>Democrat & Winner == "D" |
-      Rperc<Dperc & Winner == "R" |
-      Republican<Democrat & Winner == "R"  ~ "Winner not consistent with vote count/percent",
-      # Zeros should match
-      (Rperc == 0) != (Republican == 0) | 
-      (Dperc == 0) != (Democrat == 0) ~ "Non-matching zeros",
-      # Percentages correct (within some margin)
-      !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
-      !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) ~ "Vote percentages off by more than 5%",
-      # Total Votes = Rep + Dem + Other votes
-      Total != Democrat + Republican + Other ~ "Total does not equal sum of party votes"
-  ))
+    (Rperc > Operc) & (Rperc > Dperc) & (Winner != "R") |
+      (Dperc > Operc) & (Dperc > Rperc) & (Winner != "D") |
+      (Operc > Dperc) & (Operc > Rperc) & (Winner != "I") ~ "Winner is not consistent with vote percent",
+    (Republican > Democrat) & (Republican > Other) & (Winner != "R") |
+      (Democrat > Other) & (Democrat > Republican) & (Winner != "D") |
+      (Other > Democrat) & (Other > Republican) & (Winner != "I") ~ "Winner is not consistent with vote count",
+    # Percentages correct (within some margin)
+    !(((Republican / Total)*.95 <= Rperc) & ((Republican/Total)*1.05 >= Rperc)) |
+      !(((Democrat / Total)*.95 <= Dperc) & ((Democrat/Total)*1.05 >= Dperc)) |
+      !(((Other / Total)*.95 <= Operc) & ((Other / Total)*1.05 >= Operc)) ~ "Vote percentages off by more than 5%",
+    # Total Votes = Rep + Dem + Other votes
+    Total != Democrat + Republican + Other ~ "Total does not equal sum of party votes",
+    TRUE ~ "NA"
+  )) %>%
+  filter(problem_type != "NA")
 
-write.csv(problems, "Data/problems.csv", row.names = FALSE)
+write.csv(problems, "./HouseElections/Data/problems.csv", row.names = FALSE)
