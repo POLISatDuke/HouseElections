@@ -126,6 +126,9 @@ elections_state_year = elections %>%
     RepublicanExcess  = sum(RepublicanExcess),
     OtherExcess       = sum(OtherExcess)) %>% 
   mutate(
+    Rperc                  = RVotes / total * 100,
+    Dperc                  = DVotes / total * 100,
+    OVotes                 = OVotes / total * 100,
     PercWasted             = WastedVotes / total * 100,
     PercRepublicanWasted   = RepublicanWasted / RVotes * 100,
     PercDemocratWasted     = DemocratWasted / DVotes * 100,
@@ -269,7 +272,12 @@ ui = dashboardPage(
   )
 )
 
-server = function(input, output){
+plottingChoices = c("Winning Votes" = "WiV",
+                    "Losing Votes" = "LV",
+                    "Excess Votes" = "EV",
+                    "Wasted Votes" = "WaV")
+
+server = function(input, output, session){
   
   output$polisLogo = renderImage({
     return(list(src = "./polis-logo.jpg", contentType = "image/jpg", alt = "Alignment", width = 300, height = 60))
@@ -311,10 +319,7 @@ server = function(input, output){
           radioButtons(
             inputId = "toPlot",
             label = "Fill Criterion (%):",
-            choices = c("Winning Votes" = "WiV",
-                        "Losing Votes" = "LV",
-                        "Excess Votes" = "EV",
-                        "Wasted Votes" = "WaV"),
+            choices = plottingChoices,
             selected = "WiV")
         ),
         
@@ -322,6 +327,18 @@ server = function(input, output){
       )
     }
   )
+  
+  observe({
+    if(!is.null(input$party)){
+      if(input$party == "All"){
+        updateRadioButtons(session, "toPlot",
+                           choices = plottingChoices)
+      } else {
+        updateRadioButtons(session, "toPlot",
+                           choices = c("Vote Share", plottingChoices))
+      }
+    }
+  })
   
   output$map = renderPlot({
     ### Subset and manipulate data for this year
@@ -331,7 +348,6 @@ server = function(input, output){
     # Color choices: All plots use a single color gradient. 
     # If a major party is selected, gradient is white to their color.
     # All is white to Purple, and Other is white to gold.
-    
     
     ### Plotting Options
     if(input$toPlot == "LV" & input$party == "All"){
@@ -699,6 +715,75 @@ server = function(input, output){
         ) + 
         theme(legend.position = "bottom")
     }
+    if(input$toPlot == "Votes" & input$party == "Democratic"){
+      myPlot = statebins_continuous(
+        elections_state_year %>% dplyr::filter(Year == input$election), 
+        state_col = "State", 
+        value_col = "Dperc",
+        text_color = "gray", 
+        font_size = 10, 
+        state_border_col = "white",
+        legend_position = "bottom"
+      ) + 
+        scale_fill_continuous(
+          label = comma,
+          low = "white", high = party_colors[1],
+          limits = c(0, 100)
+        ) + 
+        guides(
+          fill = guide_colorbar(
+            title = "Percent Democratic Votes", barwidth = 20,
+            label.theme = element_text(size = 24),
+            title.theme = element_text(size = 24))
+        ) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "Votes" & input$party == "Republican"){
+      myPlot = statebins_continuous(
+        elections_state_year %>% dplyr::filter(Year == input$election), 
+        state_col = "State", 
+        value_col = "Rperc",
+        text_color = "gray", 
+        font_size = 10, 
+        state_border_col = "white",
+        legend_position = "bottom"
+      ) + 
+        scale_fill_continuous(
+          label = comma,
+          low = "white", high = party_colors[2],
+          limits = c(0, 100)
+        ) + 
+        guides(
+          fill = guide_colorbar(
+            title = "Percent Republican Votes", barwidth = 20,
+            label.theme = element_text(size = 24),
+            title.theme = element_text(size = 24))
+        ) + 
+        theme(legend.position = "bottom")
+    }
+    if(input$toPlot == "Votes" & input$party == "Independent"){
+      myPlot = statebins_continuous(
+        elections_state_year %>% dplyr::filter(Year == input$election), 
+        state_col = "State", 
+        value_col = "Operc",
+        text_color = "gray", 
+        font_size = 10, 
+        state_border_col = "white",
+        legend_position = "bottom"
+      ) + 
+        scale_fill_continuous(
+          label = comma,
+          low = "white", high = party_colors[3],
+          limits = c(0, 100)
+        ) + 
+        guides(
+          fill = guide_colorbar(
+            title = "Percent Independent Votes", barwidth = 20,
+            label.theme = element_text(size = 24),
+            title.theme = element_text(size = 24))
+        ) + 
+        theme(legend.position = "bottom")
+    }
     myPlot
   })
   
@@ -706,7 +791,10 @@ server = function(input, output){
     nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]
     elections %>% 
       filter(State == nearestState,
-             Year == input$election)
+             Year == input$election) %>%
+      mutate("% Dem." = percent(Dperc), "% Rep." = percent(Rperc), "% Ind." = percent(Operc)) %>%
+      select(Year, State, District, Winner, Democrat, Republican, Other, Total, "% Dem.", "% Rep.", "% Ind.") %>%
+      rename("Democratic" = Democrat)
   },     
   options = list(
     pageLength = 10,
@@ -716,25 +804,11 @@ server = function(input, output){
   output$state_info = renderUI({
     nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]
     stateInfo = elections_state_year %>%
-      filter(State == nearestState,
-             Year == input$election)
+      filter(State == nearestState)
     if(!is.na(nearestState)){
-      # Change this
-      HTML(
-        paste(
-          "<font size = \"+2\">",
-          nearestState, "<br/>",
-          "Total Votes:", as.character(stateInfo$total), "<br/>",
-          "% Democratic Votes:", as.character(round(stateInfo$DVotes/stateInfo$Total * 100, 2)), "<br/>",
-          "% Democratic Seats:", as.character(round(stateInfo$D/stateInfo$Reps * 100, 2)), "<br/>",
-          "% \'Wasted\' Votes:", as.character(round(stateInfo$PercWasted, 2)), "<br/>",
-          "Ratio (D Votes:Seats):", as.character(round(stateInfo$DVotes / stateInfo$Total / stateInfo$D * stateInfo$Reps, 4)), "<br/>",
-          "</font> <br/>",
-          "<font size = \"-1\"> A ratio of 1 means the distribution of votes perfectly matches the distribution of seats. <br/>
-          A ratio < 1 means the proportion of Democratic seats is greater than the proportion of Democrat votes. <br/>
-          A ratio > 1 means the proportion of Republican seats is greater than the proportion of Republican votes. <br/> </font>"
-        )
-      )
+      #TODO
+    } else {
+      HTML("Choose a state to see its districts' results change over time.")
     }
   })
   
