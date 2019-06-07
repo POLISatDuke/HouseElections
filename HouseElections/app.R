@@ -128,7 +128,7 @@ elections_state_year = elections %>%
   mutate(
     Rperc                  = RVotes / total * 100,
     Dperc                  = DVotes / total * 100,
-    OVotes                 = OVotes / total * 100,
+    Operc                  = OVotes / total * 100,
     PercWasted             = WastedVotes / total * 100,
     PercRepublicanWasted   = RepublicanWasted / RVotes * 100,
     PercDemocratWasted     = DemocratWasted / DVotes * 100,
@@ -235,7 +235,7 @@ ui = dashboardPage(
             plotOutput("map", height = 550, click = clickOpts(id = "plot_click")), 
             width = 7, height = 575),
           box(
-            div(htmlOutput("state_info")),
+            div(uiOutput("state_info")),
             width = 5, height = 575)
         ),
         
@@ -715,7 +715,7 @@ server = function(input, output, session){
         ) + 
         theme(legend.position = "bottom")
     }
-    if(input$toPlot == "Votes" & input$party == "Democratic"){
+    if(input$toPlot == "Vote Share" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -738,7 +738,7 @@ server = function(input, output, session){
         ) + 
         theme(legend.position = "bottom")
     }
-    if(input$toPlot == "Votes" & input$party == "Republican"){
+    if(input$toPlot == "Vote Share" & input$party == "Republican"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -761,7 +761,7 @@ server = function(input, output, session){
         ) + 
         theme(legend.position = "bottom")
     }
-    if(input$toPlot == "Votes" & input$party == "Independent"){
+    if(input$toPlot == "Vote Share" & input$party == "Independent"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -803,10 +803,29 @@ server = function(input, output, session){
   
   output$state_info = renderUI({
     nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]
-    stateInfo = elections_state_year %>%
+    stateInfo = elections %>%
       filter(State == nearestState)
     if(!is.na(nearestState)){
-      #TODO
+      censusYears = seq(from = 10 * ceiling(min(stateInfo$Year)/10),
+                        to = 10 * floor(max(stateInfo$Year)/10),
+                        by = 10)
+      output$statePlot = renderPlot({
+        statePlot = NULL
+        # TO DO: other parties. if there are many districts, downsample. points to lines. sensible coloring.
+        
+        if(input$party == "Republican"){
+          statePlot = ggplot(stateInfo, aes(x = Year, y = Rperc)) + 
+            geom_point() + 
+            ggtitle("District Results Over Time") + 
+            theme(panel.grid.major.x = element_blank(),
+                  panel.grid.minor.x = element_blank()) +
+            ylab("Republican Vote Share") + 
+            xlab("Year") +
+            geom_vline(mapping = NULL, xintercept = censusYears, alpha = 0.25)
+        }
+        statePlot
+      })
+      plotOutput("statePlot")
     } else {
       HTML("Choose a state to see its districts' results change over time.")
     }
