@@ -803,48 +803,44 @@ server = function(input, output, session){
   
   output$state_info = renderUI({
     nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]
-    if(!is.na(nearestState)){
+    if(!is.na(nearestState) & input$party != "All"){
       stateInfo = elections %>%
         filter(State == nearestState)
       nDistricts = stateInfo %>% group_by(Year) %>% summarise(n = n()) %>% select(n)
       nQuantiles = min(5, min(nDistricts))
-      if(nQuantiles == 1){
-        nQuantiles == max(nDistricts)
-      }
+      nQuantiles = max(2, nQuantiles)
       censusYears = seq(from = 10 * ceiling(min(stateInfo$Year)/10),
                         to = 10 * floor(max(stateInfo$Year)/10),
                         by = 10)
       output$statePlot = renderPlot({
-        # TO DO: other parties. if there are many districts, downsample. points to lines. sensible coloring.
         stateInfo2 = switch(input$party,
                             Republican = stateInfo[,c("Year", "Rperc")],
                             Democratic = stateInfo[,c("Year", "Dperc")],
                             Independent = stateInfo[,c("Year", "Operc")])
         stateInfo3 = data.frame(Year = NULL, Value = NULL, Quantile = NULL)
-        quantiles = seq(0, 1, length.out = max(nQuantiles,2))
-        for(i in 1:nrow(stateInfo2)){
-          values = stateInfo2 %>% filter(Year == stateInfo$Year[i]) %>% select(-Year)
+        quantiles = seq(0, 1, length.out = nQuantiles)
+        years = unique(stateInfo2$Year)
+        for(i in 1:length(years)){
+          values = stateInfo2 %>% filter(Year == years[i]) %>% select(-Year)
           thisYear = data.frame(
-            Year = rep(stateInfo$Year[i], nQuantiles),
-            Value = quantile(as.vector(t(values)), probs = quantiles),
+            Year = rep(years[i], nQuantiles),
+            Value = unname(quantile(as.vector(t(values)), probs = quantiles)),
             Quantile = quantiles
           )
           stateInfo3 = rbind(stateInfo3, thisYear)
         }
         statePlot = ggplot() +
-          ggtitle("District Competitiveness Over Time") +
+          ggtitle(paste0(nearestState, ": Election Competitiveness Over Time")) +
           theme(panel.grid.major.x = element_blank(),
                 panel.grid.minor.x = element_blank()) +
-          xlab("Year") +
-          geom_ribbon(
-            aes(
-              x = stateInfo3$Year[stateInfo3$Quantile == 0], 
-              ymin = 0, 
-              ymax = stateInfo3$Value[stateInfo3$Quantile == 0], 
-              fill = party_colors[input$party], 
-              alpha = 1/(nQuantiles+1)
-            )
-          )
+          xlab("Year")
+        
+        # I have no clue why this doesn't work - any party displays in Red despite choosing the colors below.
+        selected_color = switch(input$party,
+                                Democratic = party_colors[1],
+                                Republican = party_colors[2],
+                                Independent = party_colors[3])
+        
         for(i in 1:(nQuantiles-1)){
           statePlot = statePlot + 
             geom_ribbon(
@@ -852,29 +848,40 @@ server = function(input, output, session){
                 x = stateInfo3$Year[stateInfo3$Quantile == 0], 
                 ymin = stateInfo3$Value[stateInfo3$Quantile == quantiles[i]],
                 ymax = stateInfo3$Value[stateInfo3$Quantile == quantiles[i+1]],
-                fill = party_colors[input$party],
-                alpha = (i+1)/(nQuantiles+1)
+                fill = selected_color,
+                color = selected_color,
+                alpha = (i/nQuantiles)
               )
             )
         }
-        statePlot + 
-          geom_ribbon(
-            aes(
-              x = stateInfo3$Year[stateInfo3$Quantile == 0],
-              ymin = stateInfo3$Value[stateInfo3$Quantile == 1],
-              ymax = 1,
-              fill = party_colors[input$party],
-              alpha = 1
-            )
-          ) +
+        if(nQuantiles >= 3){
+          statePlot = statePlot +           
+            scale_alpha(breaks = 1:(nQuantiles-1)/nQuantiles,
+                        labels = c(paste("Least", input$party),
+                                   rep(" ", max(0,nQuantiles-3)),
+                                   paste("Most", input$party)),
+                        guide = guide_legend(
+                          label.position = "bottom",
+                          title = "Districts",
+                          title.position = "top"
+                        ))
+        } else {
+          statePlot = statePlot + guides(alpha = FALSE)
+        }
+        
+        statePlot +
           geom_vline(mapping = NULL, xintercept = censusYears, alpha = 0.25) +
           geom_hline(mapping = NULL, yintercept = 0.5, alpha = 0.5, color = "white") +
           xlim(min(stateInfo3$Year), max(stateInfo3$Year)) +
-          ylim(0,1)
+          ylim(0,1) +
+          theme(legend.position = "bottom") +
+          guides(fill = FALSE) +
+          ylab("Vote Share") +
+          guides(color = FALSE)
       })
       plotOutput("statePlot")
     } else {
-      HTML("Choose a state and party to see how district competiveness stacks up over time.")
+      HTML("Choose a state and party to see how district competitiveness stacks up over time.")
     }
   })
   
