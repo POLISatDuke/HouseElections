@@ -7,7 +7,7 @@ library(scales)
 library(statebins)
 options(scipen = 999) # Turns of scientific notation
 # Hex color codes for Dem Blue and Rep Red, Plus a Gold Color for Independents/Etc.
-party_colors <- c("Democratic" = "#2E74C0", "Republican" = "#CB454A", "Independent" = "#F0E060")
+party_colors <- c("Democratic" = "#007AFF", "Republican" = "#FF000A", "Independent" = "#FFE300")
 elections = read_csv("./Data/house.csv")
 # For each district, calculate # of voters who voted for winning candidates, losing candidates, and second-place candidates
 # Using these calculate how many kinds of "wasted" votes there are; votes in excess of second place or for losing candidates
@@ -169,13 +169,13 @@ ui = dashboardPage(
           # Third Row: Data Table Output
           box(
             title = "District Results",
+            HTML("Click on a state to see the results of its districts' elections.</br>
+                 (If no results are shown the data may be missing, but keep in mind that 
+                 not all states have house elections every two years.)"),
             width = 12,
             height = 575,
             collapsible = TRUE,
-            div(style = "overflow-x: scroll", dataTableOutput("click_info")),
-            HTML("Click on a state to see the results of its districts' elections.</br>
-                 (If no results are shown the data may be missing, but keep in mind that 
-                 not all states have house elections every two years.)")))),
+            div(style = "overflow-x: scroll", dataTableOutput("click_info"))))),
       tabItem(
         tabName = "about",
         fluidRow(
@@ -235,8 +235,8 @@ server = function(input, output, session){
           # Buttons to select party.
           inputId = "party",
           label = "Major Party:",
-          choices = c("Democratic", "Republican", "Independent", "All"),
-          selected = "All"),
+          choices = c("Democratic", "Republican", "All"),
+          selected = "Democratic"),
         radioButtons(
           # Buttons to select what data to plot.
           inputId = "toPlot",
@@ -317,25 +317,6 @@ server = function(input, output, session){
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
-    if(input$toPlot == "LV" & input$party == "Independent"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
-        value_col = "PercOtherLosing",
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = party_colors[3],
-          limits = c(0, 100)) + 
-        guides(
-          fill = guide_colorbar(
-            title = "Percent Independent Votes \nfor Losing Candidates", barwidth = 20,
-            label.theme = element_text(size = 24),
-            title.theme = element_text(size = 24))) + 
-        theme(legend.position = "bottom")}
     if(input$toPlot == "WiV" & input$party == "All"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
@@ -392,25 +373,6 @@ server = function(input, output, session){
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
-    if(input$toPlot == "WiV" & input$party == "Independent"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
-        value_col = "PercOtherWinning",
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = party_colors[3],
-          limits = c(0, 100)) + 
-        guides(
-          fill = guide_colorbar(
-            title = "Percent Independent Votes \nfor Winning Candidates", barwidth = 20,
-            label.theme = element_text(size = 24),
-            title.theme = element_text(size = 24))) + 
-        theme(legend.position = "bottom")}
     if(input$toPlot == "EV" & input$party == "All"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
@@ -464,24 +426,6 @@ server = function(input, output, session){
           limits = c(0, 100)) + 
         guides(fill = guide_colorbar(
           title = "Percent of Excess \nRepublican Votes", barwidth = 20,
-          label.theme = element_text(size = 24),
-          title.theme = element_text(size = 24))) + 
-        theme(legend.position = "bottom")}
-    if(input$toPlot == "EV" & input$party == "Independent"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
-        value_col = "PercOtherExcess",
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = party_colors[2],
-          limits = c(0, 100)) + 
-        guides(fill = guide_colorbar(
-          title = "Percent of Excess \nIndependent Votes", barwidth = 20,
           label.theme = element_text(size = 24),
           title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
@@ -542,25 +486,6 @@ server = function(input, output, session){
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
-    if(input$toPlot == "WaV" & input$party == "Independent"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
-        value_col = "PercOtherWasted",
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = party_colors[3],
-          limits = c(0, 100)) + 
-        guides(
-          fill = guide_colorbar(
-            title = "Percent \'Wasted\' \nIndependent Votes", barwidth = 20,
-            label.theme = element_text(size = 24),
-            title.theme = element_text(size = 24))) + 
-        theme(legend.position = "bottom")}
     if(input$toPlot == "Vote Share" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
@@ -599,25 +524,6 @@ server = function(input, output, session){
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
-    if(input$toPlot == "Vote Share" & input$party == "Independent"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
-        value_col = "Operc",
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = party_colors[3],
-          limits = c(0, 100)) + 
-        guides(
-          fill = guide_colorbar(
-            title = "Percent Independent Votes", barwidth = 20,
-            label.theme = element_text(size = 24),
-            title.theme = element_text(size = 24))) + 
-        theme(legend.position = "bottom")}
     myPlot})
   # Below renders data table output for clicked state and selected year
   output$click_info = renderDataTable({
@@ -627,8 +533,8 @@ server = function(input, output, session){
     elections %>% 
       filter(State == nearestState,
              Year == input$election) %>%
-      mutate("% Dem." = percent(Dperc), "% Rep." = percent(Rperc), "% Ind." = percent(Operc)) %>%
-      select(Year, State, District, Winner, Democrat, Republican, Other, Total, "% Dem.", "% Rep.", "% Ind.") %>%
+      mutate("% Dem." = percent(Dperc), "% Rep." = percent(Rperc), "% Other" = percent(Operc)) %>%
+      select(Year, State, District, Winner, Democrat, Republican, Other, Total, "% Dem.", "% Rep.", "% Other") %>%
       rename("Democratic" = Democrat)},     
   options = list(
     # Display options for the table
@@ -647,14 +553,12 @@ server = function(input, output, session){
       nQuantiles = max(2, min(5, min(nDistricts))) # Calculates a reasonable number of ribbons to draw
       # Finds census years are in the time range
       censusYears = seq(from = 10 * ceiling(min(stateInfo$Year)/10),
-                        to = 10 * floor(max(stateInfo$Year)/10),
-                        by = 10)
+                        to = 10 * floor(max(stateInfo$Year)/10), by = 10)
       # Render plot
       output$statePlot = renderPlot({
         stateInfo2 = switch(input$party,
                             Republican = stateInfo[,c("Year", "Rperc")],
-                            Democratic = stateInfo[,c("Year", "Dperc")],
-                            Independent = stateInfo[,c("Year", "Operc")])
+                            Democratic = stateInfo[,c("Year", "Dperc")])
         stateInfo3 = data.frame(Year = NULL, Value = NULL, Quantile = NULL)
         quantiles = seq(0, 1, length.out = nQuantiles)
         years = unique(stateInfo2$Year)
@@ -676,8 +580,7 @@ server = function(input, output, session){
         # I have no clue why this doesn't work - any party displays in Red despite choosing the colors below.
         selected_color = switch(input$party,
                                 Democratic = party_colors[1],
-                                Republican = party_colors[2],
-                                Independent = party_colors[3])
+                                Republican = party_colors[2])
         for(i in 1:(nQuantiles-1)){
           # Draws a ribbon between each quantile
           statePlot = statePlot + 
