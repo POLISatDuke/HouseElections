@@ -103,11 +103,9 @@ elections_state_year = elections %>%
     PercDemocratExcess    = DemocratExcess / DVotes * 100,
     PercRepublicanExcess  = RepublicanExcess/ RVotes * 100,
     PercOtherExcess       = OtherExcess / OVotes * 100)
-# Following is not useless line - coerces NaNs to NAs which behave better in statebin
-elections_state_year[is.na(elections_state_year)] = NA
-elections_state_year = elections_state_year %>% complete(State, Year)
-# TODO Complete States/Years combinations - otherwise missing in data means missing in chart
-
+# Expand table so that each state-year pair is in there (add NAs if no elections) 
+# (Missing rows will disapper in statebin)
+elections_state_year = elections_state_year %>% complete(State, Year = full_seq(Year, 2))
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
 # Statebin Coordinates for clicks
@@ -174,21 +172,26 @@ ui = dashboardPage(
             width = 12,
             height = 575,
             collapsible = TRUE,
-            div(style = "overflow-x: scroll", dataTableOutput("click_info"))))),
+            div(style = "overflow-x: scroll", dataTableOutput("click_info")),
+            HTML("Click on a state to see the results of its districts' elections.</br>
+                 (If no results are shown the data may be missing, but keep in mind that 
+                 not all states have house elections every two years.)")))),
       tabItem(
         tabName = "about",
         fluidRow(
           box(
-            h2("About the App"),
+            h2("About"),
             align = "center",
-            width = 7, height = 85),
+            width = 6, height = 85),
           box(
             imageOutput("polisLogo2"),
             align = "center",
-            width = 5, height = 85)),
+            width = 6, height = 85)),
         fluidRow(
-          # TODO Write blurb
-        )))))
+          box(
+            width = 6, title = "How to Use This App"),
+          box(
+            width = 6, title = "Credits"))))))
 
 plottingChoices = c("Winning Votes" = "WiV",
                     "Losing Votes" = "LV",
@@ -199,18 +202,20 @@ server = function(input, output, session){
   
   # Load images for logos (need one for each page)
   output$polisLogo = renderImage({
-    return(list(src = "./polis-logo.jpg", contentType = "image/jpg", alt = "Alignment", width = 300, height = 60))
-  }, deleteFile = FALSE)
+    return(list(src = "./polis-logo.jpg", contentType = "image/jpg", 
+                alt = "Alignment", width = 300, height = 60))}, deleteFile = FALSE)
 
   output$polisLogo2 = renderImage({
-    return(list(src = "./polis-logo.jpg", contentType = "image/jpg", alt = "Alignment", width = 300, height = 60))
-  }, deleteFile = FALSE)
+    return(list(src = "./polis-logo.jpg", contentType = "image/jpg", 
+                alt = "Alignment", width = 300, height = 60))}, deleteFile = FALSE)
 
   # Sidebar menu is an output object so it may react to user inputs.
   output$sidebar = renderMenu({
     sidebarMenu(
       id = "sidebarmenu",
-      menuItem("Representation by State", tabName = "viz", icon = icon("chart-area")),
+      menuItem("About", tabName = "about", icon = icon("info-circle")), # About section
+      menuItem("Representation by State", tabName = "viz", icon = icon("chart-area"), 
+               selected = TRUE),
       conditionalPanel(
         "input.sidebarmenu === 'viz'", # Displays only if 'viz' panel is being viewed. 
         # This panel shows options for mapping.
@@ -223,25 +228,21 @@ server = function(input, output, session){
           value = max(elections_state_year$Year),
           step = 2,
           animate = TRUE,
-          width = 380,
+          width = 300,
+          ticks = FALSE,
           sep = ""),
         radioButtons(
           # Buttons to select party.
           inputId = "party",
           label = "Major Party:",
-          choices = c("Democratic",
-                      "Republican",
-                      "Independent",
-                      "All"),
+          choices = c("Democratic", "Republican", "Independent", "All"),
           selected = "All"),
         radioButtons(
           # Buttons to select what data to plot.
           inputId = "toPlot",
           label = "Fill Criterion (%):",
           choices = plottingChoices,
-          selected = "WiV")),
-      menuItem("About", tabName = "about", icon = icon("info-circle")) # About section
-    )})
+          selected = "WiV")))})
   observe({
     # This observer removes "Vote Share" as an option if 'All' party is selected (because all parties together have 100%)
     if(!is.null(input$party)){
@@ -250,8 +251,7 @@ server = function(input, output, session){
                            choices = plottingChoices)
       } else {
         updateRadioButtons(session, "toPlot",
-                           choices = c("Vote Share", plottingChoices))
-      }}})
+                           choices = c("Vote Share", plottingChoices))}}})
   
   output$map = renderPlot({
     # Subset and manipulate data for this year
