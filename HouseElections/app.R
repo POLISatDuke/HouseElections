@@ -139,10 +139,8 @@ statebins_coords = data.frame(
     4, 2, 1))
 # Set up App User Interface
 ui = dashboardPage(
-  dashboardHeader(
-    title = "U.S. House Elections"),
-  dashboardSidebar(
-    sidebarMenuOutput("sidebar")),
+  dashboardHeader(title = "U.S. House Elections"),
+  dashboardSidebar(sidebarMenuOutput("sidebar")),
   dashboardBody(
     tabItems(
       tabItem(
@@ -189,7 +187,22 @@ ui = dashboardPage(
             width = 6, height = 85)),
         fluidRow(
           box(
-            width = 6, title = "How to Use This App"),
+            width = 6, title = HTML("<h2><center>What am I looking at?</h2></center>"),
+            HTML("This visualization shows the results of U.S. House of Representatives elections. 
+                  The statebin map on the left side of the page shows the results in a particular year, 
+                  which you can selected using the slider input in the sidebar. 
+                  The states are colored according the party and criterion you choose:
+                  </br>'Winning Votes' shows the percentage of votes cast for candidates of the chosen party that won their election.
+                  </br>'Losing Votes' is the opposite; it shows what fraction of a party's votes went to losing candidates.
+                  </br>'Excess Votes' is the difference between the winner's vote share and the runner-up's vote share.
+                  It is smaller in close elections and larger in landslides.
+                  </br> 'Wasted Votes' is the percentage of votes that were cast for a losing candidate or for a winning candidate in excess of the runner-up.
+                  In principle, these people could have stayed home on election day and the result of the election would not have changed. (Losing + Excess = Wasted).
+                  </br><center><h3>'Wasted Votes'?</h3></center>
+                  We show 'Wasted' votes here as a crude measure of how well-represented a state's electorate is, but the name 'wasted' is imprecise and should not be taken too seriously.
+                  If a population somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
+                  the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
+                  This is technically a dictatorship, and certainly not how we should want elections to go.")),
           box(
             width = 6, title = "Credits"))))))
 
@@ -214,11 +227,11 @@ server = function(input, output, session){
     sidebarMenu(
       id = "sidebarmenu",
       menuItem("About", tabName = "about", icon = icon("info-circle")), # About section
-      menuItem("Representation by State", tabName = "viz", icon = icon("chart-area"), 
-               selected = TRUE),
+      menuItem("Representation by State", tabName = "viz", icon = icon("chart-area"), selected = TRUE),
       conditionalPanel(
         "input.sidebarmenu === 'viz'", # Displays only if 'viz' panel is being viewed. 
         # This panel shows options for mapping.
+        HTML("</br><center>1. Choose which year's</br>election to view,or hit 'play'</br>to see a time-lapse.</center>"),
         sliderInput(
           # Slider to select year.
           inputId = "election",
@@ -231,12 +244,15 @@ server = function(input, output, session){
           width = 300,
           ticks = FALSE,
           sep = ""),
+        HTML("</br><center>2. Choose a party to see</br>detailed stats, or 'All' for a</br>state-by-state summary.</center>"),
         radioButtons(
           # Buttons to select party.
           inputId = "party",
           label = "Major Party:",
           choices = c("Democratic", "Republican", "All"),
           selected = "Democratic"),
+        HTML("</br><center>3. Choose which data to plot.
+             </br>See 'About' Tab for details</center>"),
         radioButtons(
           # Buttons to select what data to plot.
           inputId = "toPlot",
