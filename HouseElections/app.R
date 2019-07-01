@@ -204,7 +204,7 @@ ui = dashboardPage(
                   the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
                   This is technically a dictatorship, and certainly not how we should want elections to go.")),
           box(
-            width = 6, title = "Credits"))))))
+            width = 6, title = HTML("<h2><center>Credits</h2></center>")))))))
 
 plottingChoices = c("Winning Votes" = "WiV",
                     "Losing Votes" = "LV",
