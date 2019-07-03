@@ -5,6 +5,6 @@ account: eidan-jacob
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 841734
-bundleId: 2189849
+bundleId: 2198510
 url: https://eidan-jacob.shinyapps.io/houseelections/
-when: 1561940809.31349
+when: 1562195319.78202

@@ -7,7 +7,7 @@ library(scales)
 library(statebins)
 options(scipen = 999) # Turns of scientific notation
 # Hex color codes for Dem Blue and Rep Red, Plus a Gold Color for Independents/Etc.
-party_colors <- c("Democratic" = "#007AFF", "Republican" = "#FF000A", "Independent" = "#FFE300")
+party_colors <- c("Democratic" = "#007AFF", "Republican" = "#FF000A", "Other" = "#FFE300")
 elections = read_csv("./Data/house.csv")
 # For each district, calculate # of voters who voted for winning candidates, losing candidates, and second-place candidates
 # Using these calculate how many kinds of "wasted" votes there are; votes in excess of second place or for losing candidates
@@ -147,6 +147,16 @@ statebins_coords = data.frame(
     7:2, 7:3, 7:4,
     8, 6:3, 5:2, 
     4, 2, 1))
+# Data frame for drawing rectangles over statebin plot
+rectangles = rbind(statebins_coords %>% mutate(Party = "Republican"),
+                   statebins_coords %>% mutate(Party = "Democratic"),
+                   statebins_coords %>% mutate(Party = "Other")) %>% 
+  mutate(xmin = x-.42, xmax = x+.42, ymin = y-.42, ymax = y+.42,
+         abbr = rep(c("HI", "AK", "CA", "OR", "WA", "AZ", "UT", "NV", "ID",
+                  "NM", "CO", "WY", "MT", "TX", "OK", "KA", "NE", "SD", "ND",
+                  "LA", "AS", "MO", "IA", "MN", "MS", "TN", "KY", "IN", "IL", "WI",
+                  "AL", "NC", "WV", "OH", "MI", "GA", "SC" , "VA", "PA",
+                  "FL", "DC", "MD", "NJ", "NY", "DL", "CT", "MA", "VT", "RI", "NH", "ME"),3))
 # Set up App User Interface
 ui = dashboardPage(
   dashboardHeader(title = "U.S. House Elections"),
@@ -280,27 +290,41 @@ server = function(input, output, session){
             choices = c("Votes by Party" = "V",
                         "House Seats by Party" = "S",
                         "Representation Ratio" = "R")),
-          HTML("<center>The Representation Ratio compares</br>the number of Representatives each</br>party elected to the proportion</br>of votes that they won.</center>")
-        )))})
+          HTML("<center>The Representation Ratio compares</br>the number of Representatives each</br>party elected to the proportion</br>of votes that they won.</center>"))))})
   
   output$map = renderPlot({
     # Below Generates plot per plotting options
     if(input$party == "Election Summary"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State",
-        value_col = NULL,
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom")}
+      # What follows is my janky imitation of a statebins plot
+      if(input$summaryPlot == "V"){
+        this_year = elections_state_year %>% filter(Year == input$election)
+        this_year$Dfrac = this_year$Dperc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
+        this_year$Ofrac = this_year$Operc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
+        this_year$Rfrac = this_year$Rperc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
+        # Plot Order is R, D, and then O, so only need to adjust starting points for latter 2 (others will overwrite)
+        rectangles2 = rectangles
+        rectangles2$xmin = sapply(1:nrow(rectangles2), function(i){
+          this_year_state = this_year %>% filter(State == rectangles2$State[i])
+          rectangles2$xmin[i] + 0.84 * ( 
+            this_year_state$Rfrac * as.numeric(rectangles2$Party[i] != "Republican") +
+            this_year_state$Dfrac * as.numeric(rectangles2$Party[i] == "Other"))})
+        myPlot = ggplot() +
+          geom_rect(data = rectangles2, 
+                    mapping = aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax = ymax, fill = Party)) +
+          theme_void() +
+          guides(fill = guide_legend(title = NULL, label.theme = element_text(size = 24), nrow = 3,
+                                     label.position = "right")) + 
+          xlim(0.5, 12.5) + ylim(10.3, 0.3) +
+          theme(legend.position = c(0.5,.1)) +
+          scale_fill_manual(values = party_colors) +
+          geom_text(data = rectangles2, size = 9, aes(x = x, y = y, label = abbr))}}
     if(input$toPlot == "LV" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "PercDemocratLosing",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -317,8 +341,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "PercRepublicanLosing",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom")+ 
         scale_fill_continuous(
@@ -336,8 +360,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "PercDemocratWinning",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -354,8 +378,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "PercRepublicanWinning",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -373,8 +397,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "PercDemocratExcess",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -392,8 +416,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "PercRepublicanExcess",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -410,8 +434,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "PercDemocratWasted",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -429,8 +453,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "PercRepublicanWasted",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -448,8 +472,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "Dperc",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -467,8 +491,8 @@ server = function(input, output, session){
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
         value_col = "Rperc",
-        text_color = "gray", 
-        font_size = 10, 
+        text_color = "black" , 
+        font_size = 9, 
         state_border_col = "white",
         legend_position = "bottom") + 
         scale_fill_continuous(
@@ -501,7 +525,8 @@ server = function(input, output, session){
   output$state_info = renderUI({
     # Find clicked state
     nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]
-    if(!is.na(nearestState) & input$party != "Election Summary"){
+    print(nearestState)
+    if(!is.na(nearestState)){
       # Filters data
       stateInfo = elections %>% filter(State == nearestState)
       # Counts number of districts in the state per year
