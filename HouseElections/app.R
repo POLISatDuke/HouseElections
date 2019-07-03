@@ -206,7 +206,8 @@ ui = dashboardPage(
           box(
             width = 6, title = HTML("<h2><center>Credits</h2></center>")))))))
 
-plottingChoices = c("Winning Votes" = "WiV",
+plottingChoices = c("Vote Share" = "V",
+                    "Winning Votes" = "WiV",
                     "Losing Votes" = "LV",
                     "Excess Votes" = "EV",
                     "Wasted Votes" = "WaV")
@@ -229,7 +230,7 @@ server = function(input, output, session){
       menuItem("About", tabName = "about", icon = icon("info-circle")), # About section
       menuItem("Representation by State", tabName = "viz", icon = icon("chart-area"), selected = TRUE),
       conditionalPanel(
-        "input.sidebarmenu === 'viz'", # Displays only if 'viz' panel is being viewed. 
+        "input.sidebarmenu == 'viz'", # Displays only if 'viz' panel is being viewed. 
         # This panel shows options for mapping.
         HTML("</br><center>1. Choose which year's</br>election to view,or hit 'play'</br>to see a time-lapse.</center>"),
         sliderInput(
@@ -249,25 +250,18 @@ server = function(input, output, session){
           # Buttons to select party.
           inputId = "party",
           label = "Major Party:",
-          choices = c("Democratic", "Republican", "All"),
+          choices = c("Democratic", "Republican", "Election Summary"),
           selected = "Democratic"),
-        HTML("</br><center>3. Choose which data to plot.
-             </br>See 'About' Tab for details</center>"),
-        radioButtons(
-          # Buttons to select what data to plot.
-          inputId = "toPlot",
-          label = "Fill Criterion (%):",
-          choices = plottingChoices,
-          selected = "WiV")))})
-  observe({
-    # This observer removes "Vote Share" as an option if 'All' party is selected (because all parties together have 100%)
-    if(!is.null(input$party)){
-      if(input$party == "All"){
-        updateRadioButtons(session, "toPlot",
-                           choices = plottingChoices)
-      } else {
-        updateRadioButtons(session, "toPlot",
-                           choices = c("Vote Share", plottingChoices))}}})
+        conditionalPanel(
+          "input.party != 'Election Summary'",
+          HTML("</br><center>3. Choose which data to plot.
+             </br>See 'About' Tab for details.</center>"),
+          radioButtons(
+            # Buttons to select what data to plot.
+            inputId = "toPlot",
+            label = "Fill Criterion (%):",
+            choices = plottingChoices,
+            selected = "V"))))})
   
   output$map = renderPlot({
     # Subset and manipulate data for this year
@@ -277,25 +271,14 @@ server = function(input, output, session){
     # If a major party is selected, gradient is white to their color.
     # All is white to Purple, and Other is white to gold.
     # Below Generates plot per plotting options
-    if(input$toPlot == "LV" & input$party == "All"){
+    if(input$party == "Election Summary"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
-        value_col = "LosingVotes",
         text_color = "gray", 
         font_size = 10, 
         state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = "purple",
-          limits = c(0, 100)) +
-        guides(
-          fill = guide_colorbar(
-            title = "Percent Votes \nfor Losing Candidates", barwidth = 20,
-            label.theme = element_text(size = 24),
-            title.theme = element_text(size = 24))) +
-        theme(legend.position = "bottom")}
+        legend_position = "bottom")}
     if(input$toPlot == "LV" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
@@ -333,25 +316,6 @@ server = function(input, output, session){
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
-    if(input$toPlot == "WiV" & input$party == "All"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
-        value_col = "WinningVotes",
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = "purple",
-          limits = c(0, 100)) + 
-        guides(
-          fill = guide_colorbar(
-            title = "Percent Votes \nfor Winning Candidates", barwidth = 20,
-            label.theme = element_text(size = 24),
-            title.theme = element_text(size = 24))) + 
-        theme(legend.position = "bottom")}
     if(input$toPlot == "WiV" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
@@ -386,25 +350,6 @@ server = function(input, output, session){
         guides(
           fill = guide_colorbar(
             title = "Percent Republican Votes \nfor Winning Candidates", barwidth = 20,
-            label.theme = element_text(size = 24),
-            title.theme = element_text(size = 24))) + 
-        theme(legend.position = "bottom")}
-    if(input$toPlot == "EV" & input$party == "All"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
-        value_col = "ExcessVotes",
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = "purple",
-          limits = c(0, 100)) + 
-        guides(
-          fill = guide_colorbar(
-            title = "Percent Excess Votes", barwidth = 20,
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
@@ -483,26 +428,7 @@ server = function(input, output, session){
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
-    if(input$toPlot == "WaV" & input$party == "All"){
-      myPlot = statebins_continuous(
-        elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
-        value_col = "PercWasted",
-        text_color = "gray", 
-        font_size = 10, 
-        state_border_col = "white",
-        legend_position = "bottom") + 
-        scale_fill_continuous(
-          label = comma,
-          low = "white", high = "purple",
-          limits = c(0, 100)) + 
-        guides(
-          fill = guide_colorbar(
-            title = "Percent \'Wasted\' \nVotes", barwidth = 20,
-            label.theme = element_text(size = 24),
-            title.theme = element_text(size = 24))) + 
-        theme(legend.position = "bottom")}
-    if(input$toPlot == "Vote Share" & input$party == "Democratic"){
+    if(input$toPlot == "V" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -521,7 +447,7 @@ server = function(input, output, session){
             label.theme = element_text(size = 24),
             title.theme = element_text(size = 24))) + 
         theme(legend.position = "bottom")}
-    if(input$toPlot == "Vote Share" & input$party == "Republican"){
+    if(input$toPlot == "V" & input$party == "Republican"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
         state_col = "State", 
@@ -560,7 +486,7 @@ server = function(input, output, session){
   output$state_info = renderUI({
     # Find clicked state
     nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]
-    if(!is.na(nearestState) & input$party != "All"){
+    if(!is.na(nearestState) & input$party != "Election Summary"){
       # Filters data
       stateInfo = elections %>% filter(State == nearestState)
       # Counts number of districts in the state per year
