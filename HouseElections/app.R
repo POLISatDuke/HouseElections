@@ -25,12 +25,12 @@ elections = elections %>%
     LosingVotes = 
       Republican   * as.numeric(Winner != "R") + 
       Democrat     * as.numeric(Winner != "D") + 
-      Other        * as.numeric(Winner != "O"),
+      Other        * as.numeric(Winner != "I"),
     LosingPerc = (LosingVotes / Total) * 100,
     WinningVotes =
       Republican   * as.numeric(Winner == "R") +
       Democrat     * as.numeric(Winner == "D") +
-      Other        * as.numeric(Winner == "O"),
+      Other        * as.numeric(Winner == "I"),
     WinningPerc      = (WinningVotes / Total) * 100,
     ExcessVotes      = WinningVotes - SecondPlaceVotes,
     ExcessPerc       = WinningPerc - LosingPerc,
@@ -45,18 +45,18 @@ elections = elections %>%
       (Democrat - SecondPlaceVotes) * as.numeric(Winner == "D"),
     DemocratWastedPerc = (DemocratWasted / Democrat) * 100,
     OtherWasted = 
-      Other                      * as.numeric(Winner != "O") + 
-      (Other - SecondPlaceVotes) * as.numeric(Winner == "O"),
+      Other                      * as.numeric(Winner != "I") + 
+      (Other - SecondPlaceVotes) * as.numeric(Winner == "I"),
     OtherWastedPerc   = OtherWasted / Other * 100,
     DemocratLosing    = Democrat * as.numeric(Winner != "D"),
     RepublicanLosing  = Republican * as.numeric(Winner != "R"),
-    OtherLosing       = Other * as.numeric(Winner != "O"),
+    OtherLosing       = Other * as.numeric(Winner != "I"),
     DemocratWinning   = Democrat * as.numeric(Winner == "D"),
     RepublicanWinning = Republican * as.numeric(Winner == "R"),
-    OtherWinning      = Other * as.numeric(Winner == "O"),
+    OtherWinning      = Other * as.numeric(Winner == "I"),
     DemocratExcess    = (Democrat - SecondPlaceVotes) * as.numeric(Winner == "D"),
     RepublicanExcess  = (Republican - SecondPlaceVotes) * as.numeric(Winner == "R"),
-    OtherExcess       = (Other - SecondPlaceVotes) * as.numeric(Winner == "O"))
+    OtherExcess       = (Other - SecondPlaceVotes) * as.numeric(Winner == "I"))
 # Binning by state and year
 elections_state_year = elections %>%
   group_by(State, Year) %>%
@@ -108,7 +108,16 @@ elections_state_year = elections %>%
 elections_state_year = elections_state_year %>% complete(State, Year = full_seq(Year, 2))
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
-election_summary_state_year = elections_state_year 
+election_summary_state_year = elections_state_year %>% 
+  select("id", "State", "Year", "R", "D", "O", "Rperc", "Dperc", "Operc") %>%
+  mutate(Rratio = (Dperc + Operc) / Rperc * R / (D + O),
+         Dratio = (Rperc + Operc) / Dperc * D / (R + O),
+         Oratio = (Dperc + Rperc) / Operc * O / (D + R),
+         maxRatio = max(Rratio, Dratio, Oratio),
+         maxParty = case_when(
+           maxRatio == Rratio ~ "Republican",
+           maxRatio == Dratio ~ "Democratic",
+           maxRatio == Oratio ~ "Other"))
 # Statebin Coordinates for clicks
 statebins_coords = data.frame(
   State = c(
@@ -251,8 +260,8 @@ server = function(input, output, session){
           # Buttons to select party.
           inputId = "party",
           label = "Major Party:",
-          choices = c("Democratic", "Republican", "Election Summary"),
-          selected = "Democratic"),
+          choices = c("Election Summary", "Democratic", "Republican"),
+          selected = "Election Summary"),
         HTML("</br><center>3. Choose which data to plot.
              </br>See 'About' Tab for details.</center>"),
         conditionalPanel(
@@ -275,12 +284,6 @@ server = function(input, output, session){
         )))})
   
   output$map = renderPlot({
-    # Subset and manipulate data for this year
-    this_year = elections_state_year %>%
-      dplyr::filter(Year == input$election)
-    # Notes on color choices: All plots use a single color gradient. 
-    # If a major party is selected, gradient is white to their color.
-    # All is white to Purple, and Other is white to gold.
     # Below Generates plot per plotting options
     if(input$party == "Election Summary"){
       myPlot = statebins_continuous(
