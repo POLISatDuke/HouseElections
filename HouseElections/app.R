@@ -108,6 +108,7 @@ elections_state_year = elections %>%
 elections_state_year = elections_state_year %>% complete(State, Year = full_seq(Year, 2))
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
+election_summary_state_year = elections_state_year 
 # Statebin Coordinates for clicks
 statebins_coords = data.frame(
   State = c(
@@ -252,16 +253,26 @@ server = function(input, output, session){
           label = "Major Party:",
           choices = c("Democratic", "Republican", "Election Summary"),
           selected = "Democratic"),
+        HTML("</br><center>3. Choose which data to plot.
+             </br>See 'About' Tab for details.</center>"),
         conditionalPanel(
           "input.party != 'Election Summary'",
-          HTML("</br><center>3. Choose which data to plot.
-             </br>See 'About' Tab for details.</center>"),
           radioButtons(
             # Buttons to select what data to plot.
             inputId = "toPlot",
-            label = "Fill Criterion (%):",
+            label = "Show me:",
             choices = plottingChoices,
-            selected = "V"))))})
+            selected = "V")),
+        conditionalPanel(
+          "input.party == 'Election Summary'",
+          radioButtons(
+            inputId = "summaryPlot",
+            label = "Show me:",
+            choices = c("Votes by Party" = "V",
+                        "House Seats by Party" = "S",
+                        "Representation Ratio" = "R")),
+          HTML("<center>The Representation Ratio compares</br>the number of Representatives each</br>party elected to the proportion</br>of votes that they won.</center>")
+        )))})
   
   output$map = renderPlot({
     # Subset and manipulate data for this year
@@ -274,7 +285,8 @@ server = function(input, output, session){
     if(input$party == "Election Summary"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
-        state_col = "State", 
+        state_col = "State",
+        value_col = NULL,
         text_color = "gray", 
         font_size = 10, 
         state_border_col = "white",
