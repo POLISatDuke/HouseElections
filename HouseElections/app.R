@@ -106,7 +106,7 @@ elections_state_year = elections %>%
 # Expand table so that each state-year pair is in there (add NAs if no elections) 
 # (Missing rows will disapper in statebin)
 elections_state_year = elections_state_year %>% complete(State, Year = full_seq(Year, 2))
-elections_state_year$caption = paste0(elections_state_year$R, "R:", elections_state_year$D, "D")
+elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
 election_summary_state_year = elections_state_year %>% 
   select("id", "State", "Year", "R", "D", "O", "Rperc", "Dperc", "Operc") %>%
@@ -209,15 +209,20 @@ ui = dashboardPage(
             width = 6, title = HTML("<h2><center>What am I looking at?</h2></center>"),
             HTML("This visualization shows the results of U.S. House of Representatives elections. 
                   The statebin map on the left side of the page shows the results in a particular year, 
-                  which you can selected using the slider input in the sidebar. 
-                  The states are colored according the party and criterion you choose:
+                  which you can selected using the slider input in the sidebar.
+                  In the election summary view, you can compare how well a state's elected officials actually match the
+                  votes cast on election day (in terms of party membership) using the 'Representation Ratio'. 
+                  This is a limited measure, since smaller states with only one or a small number of 
+                  districts will naturally have higher ratios and not all vote count data are available. But there are larger states
+                  that consistently over-represent particular parties, which could indicate gerrymandering.
+                  </br>If you select one of the major parties (step 2), the states will colored according to the criterion you choose:
                   </br>'Winning Votes' shows the percentage of votes cast for candidates of the chosen party that won their election.
                   </br>'Losing Votes' is the opposite; it shows what fraction of a party's votes went to losing candidates.
                   </br>'Excess Votes' is the difference between the winner's vote share and the runner-up's vote share.
                   It is smaller in close elections and larger in landslides.
                   </br> 'Wasted Votes' is the percentage of votes that were cast for a losing candidate or for a winning candidate in excess of the runner-up.
                   In principle, these people could have stayed home on election day and the result of the election would not have changed. (Losing + Excess = Wasted).
-                  </br><center><h3>'Wasted Votes'?</h3></center>
+                  </br><center><h4>'Wasted Votes'?</h4></center>
                   We show 'Wasted' votes here as a crude measure of how well-represented a state's electorate is, but the name 'wasted' is imprecise and should not be taken too seriously.
                   If a population somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
                   the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
@@ -288,7 +293,8 @@ server = function(input, output, session){
             label = "Show me:",
             choices = c("Votes by Party" = "V",
                         "House Seats by Party" = "S",
-                        "Representation Ratio" = "R")),
+                        "Representation Ratio" = "R"),
+            selected = "R"),
           HTML("<center>The Representation Ratio compares</br>the number of Representatives each</br>party elected to the proportion</br>of votes that they won.</center>"))))})
   
   output$map = renderPlot({
@@ -570,20 +576,46 @@ server = function(input, output, session){
     searching = FALSE))
   # Below renders district competitiveness graph for clicked state
   output$state_info = renderUI({
+    if(input$party == "Election Summary"){
+      ui_out = "</br><center><h4>Visualizing U.S. House of Representatives Elections</h4></center>
+      </br>If you choose 'Votes by Party' or 'House Seats by Party', each state will be colored in 
+      proportion to the fraction of votes or representatives belonging to a particular party.
+      The 'Representation Ratio' is calculated by dividing the proportion of elected representatives from
+      a party by the proportion of votes won by that same party. For example, a Repubiclan ratio of 2 means that,
+      by proportion, there are twice as many Republican representatives as Republican votes. States are colored
+      by which party is most overrepresented and saturated according to the scale of over-representation.
+      </br>To start, try comparing Maryland and North Carolina's over-representation from 2000 to 2010 
+      to those same states since 2010. You can also click on a state to see more details."
+      # Find clicked state
+      nearestState = NA
+      #print(input$plot_click)
+      if(!is.null(input$plot_click)){
+        nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
+      #print(nearestState)
+      if(!is.na(nearestState)){
+        # Filters data
+        stateInfo = elections_state_year %>% filter(State == as.character(nearestState), Year == input$election)
+        ui_out = paste(ui_out, "</br><h4><center>", nearestState, input$election, "</h4></center><center>",
+                       as.character(stateInfo$Reps), "Representative(s) Elected,", stateInfo$caption, 
+                       "</center></br><center>Democratic Votes (%):", round(stateInfo$Dperc,2), 
+                       "</center></br><center>Republican Votes (%):", round(stateInfo$Rperc,2),
+                       "</center></br><center>Other Votes (%):", round(stateInfo$Operc,2), "</center>")}
+      HTML(ui_out) # There could probably be a neat graph added here (ratio vs time. colored by party?)
+    } else {
     # Find clicked state
     nearestState = NA
-    print(input$plot_click)
+    #print(input$plot_click)
     if(!is.null(input$plot_click)){
       nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
-    print(nearestState)
+    #print(nearestState)
     if(!is.na(nearestState)){
       # Filters data
       stateInfo = elections %>% filter(State == as.character(nearestState))
-      # Counts number of districts in the state per year
-      HTML("hi eidan")
-      # plotOutput("statePlot")
+      output$statePlot = renderPlot({ggplot() + 
+          geom_point(data = stateInfo, aes(x = Year, y = Dperc))})
+      plotOutput("statePlot")
     } else {
       # If a state isn't selected display this tooltip.
-      HTML("Choose a state and party to see how district competitiveness stacks up over time.")}})}
+      HTML("Choose a state and party to see how district competitiveness stacks up over time.")}}})}
 # Runs app
 shinyApp(ui, server)
