@@ -106,7 +106,7 @@ elections_state_year = elections %>%
 # Expand table so that each state-year pair is in there (add NAs if no elections) 
 # (Missing rows will disapper in statebin)
 elections_state_year = elections_state_year %>% complete(State, Year = full_seq(Year, 2))
-elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
+elections_state_year$caption = paste0(elections_state_year$R, "R:", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
 election_summary_state_year = elections_state_year %>% 
   select("id", "State", "Year", "R", "D", "O", "Rperc", "Dperc", "Operc") %>%
@@ -296,8 +296,8 @@ server = function(input, output, session){
     # Below Generates plot per plotting options
     if(input$party == "Election Summary"){
       # What follows is my janky imitation of a statebins plot
+      this_year = elections_state_year %>% filter(Year == input$election)
       if(input$summaryPlot == "V"){
-        this_year = elections_state_year %>% filter(Year == input$election)
         this_year$Dfrac = this_year$Dperc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
         this_year$Ofrac = this_year$Operc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
         this_year$Rfrac = this_year$Rperc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
@@ -307,7 +307,7 @@ server = function(input, output, session){
           this_year_state = this_year %>% filter(State == rectangles2$State[i])
           rectangles2$xmin[i] + 0.84 * ( 
             this_year_state$Rfrac * as.numeric(rectangles2$Party[i] != "Republican") +
-            this_year_state$Dfrac * as.numeric(rectangles2$Party[i] == "Other"))})
+              this_year_state$Dfrac * as.numeric(rectangles2$Party[i] == "Other"))})
         myPlot = ggplot() +
           geom_rect(data = rectangles2, 
                     mapping = aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax = ymax, fill = Party)) +
@@ -317,7 +317,52 @@ server = function(input, output, session){
           xlim(0.5, 12.5) + ylim(10.3, 0.3) +
           theme(legend.position = c(0.5,.1)) +
           scale_fill_manual(values = party_colors) +
-          geom_text(data = rectangles2, size = 9, aes(x = x, y = y, label = abbr))}}
+          geom_text(data = rectangles2, size = 9, aes(x = x, y = y, label = abbr))}
+      if(input$summaryPlot == "S"){
+        this_year$Dfrac = this_year$D / (this_year$D + this_year$O + this_year$R)
+        this_year$Ofrac = this_year$O / (this_year$D + this_year$O + this_year$R)
+        this_year$Rfrac = this_year$R / (this_year$D + this_year$O + this_year$R)
+        rectangles2 = plyr::join(rectangles, this_year)
+        rectangles2$xmin = sapply(1:nrow(rectangles2), function(i){
+          this_year_state = this_year %>% filter(State == rectangles2$State[i])
+          rectangles2$xmin[i] + 0.84 * ( 
+            this_year_state$Rfrac * as.numeric(rectangles2$Party[i] != "Republican") +
+              this_year_state$Dfrac * as.numeric(rectangles2$Party[i] == "Other"))})
+        myPlot = ggplot() +
+          geom_rect(data = rectangles2, 
+                    mapping = aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax = ymax, fill = Party)) +
+          theme_void() +
+          guides(fill = guide_legend(title = NULL, label.theme = element_text(size = 24), nrow = 3,
+                                     label.position = "right")) + 
+          xlim(0.5, 12.5) + ylim(10.3, 0.3) +
+          theme(legend.position = c(0.5,.1)) +
+          scale_fill_manual(values = party_colors) +
+          geom_text(data = rectangles2, size = 7, aes(x = x, y = y-.2, label = abbr)) + 
+          geom_text(data = rectangles2, size = 4, aes(x = x, y = y+.2, label = caption, fontface = "bold"))
+      }
+      if(input$summaryPlot == "R"){
+        this_year$Dratio = (this_year$D / (this_year$D + this_year$R + this_year$O)) / (this_year$Dperc / (this_year$Dperc + this_year$Rperc + this_year$Operc))
+        this_year$Rratio = (this_year$R / (this_year$D + this_year$R + this_year$O)) / (this_year$Rperc / (this_year$Dperc + this_year$Rperc + this_year$Operc))
+        #this_year$Oratio = (this_year$O / (this_year$D + this_year$R + this_year$O)) / (this_year$Dperc + this_year$Rperc + this_year$Operc)
+        this_year$maxRatio = sapply(1:nrow(this_year), function(i){
+          max(this_year$Dratio[i], this_year$Rratio[i])})
+        this_year$maxParty = sapply(1:nrow(this_year), function(i){
+          c(c("Democratic", "Republican")[which(c(this_year$Dratio[i], this_year$Rratio[i]) == this_year$maxRatio[i])])[1]})
+        rectangles2 = plyr::join(rectangles, this_year) %>% filter(Party == maxParty)
+        myPlot = ggplot() +
+          geom_rect(data = rectangles2, 
+                    mapping = aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax = ymax, fill = Party, alpha = maxRatio)) +
+          theme_void() +
+          guides(fill = guide_legend(title = "Most Overrepresented Party", title.theme = element_text(size = 20), label.theme = element_text(size = 20), nrow = 3,
+                                     label.position = "right"),
+                 alpha = "none") +
+          xlim(0.5, 12.5) + ylim(10.3, 0.3) +
+          theme(legend.position = c(0.5,.1)) +
+          scale_fill_manual(values = party_colors) +
+          geom_text(data = rectangles2, size = 7, aes(x = x, y = y-.2, label = abbr)) + 
+          geom_text(data = rectangles2, size = 4, aes(x = x, y = y+.2, label = round(maxRatio,2)))
+      }
+      myPlot}
     if(input$toPlot == "LV" & input$party == "Democratic"){
       myPlot = statebins_continuous(
         elections_state_year %>% dplyr::filter(Year == input$election), 
