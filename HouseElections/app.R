@@ -343,11 +343,14 @@ server = function(input, output, session){
       if(input$summaryPlot == "R"){
         this_year$Dratio = (this_year$D / (this_year$D + this_year$R + this_year$O)) / (this_year$Dperc / (this_year$Dperc + this_year$Rperc + this_year$Operc))
         this_year$Rratio = (this_year$R / (this_year$D + this_year$R + this_year$O)) / (this_year$Rperc / (this_year$Dperc + this_year$Rperc + this_year$Operc))
-        #this_year$Oratio = (this_year$O / (this_year$D + this_year$R + this_year$O)) / (this_year$Dperc + this_year$Rperc + this_year$Operc)
+        this_year$Oratio = (this_year$O / (this_year$D + this_year$R + this_year$O)) / (this_year$Operc / (this_year$Dperc + this_year$Rperc + this_year$Operc))
+        this_year$Dratio[is.nan(this_year$Dratio)|is.na(this_year$Dratio)] = 0
+        this_year$Rratio[is.nan(this_year$Rratio)|is.na(this_year$Rratio)] = 0
+        this_year$Oratio[is.nan(this_year$Oratio)|is.na(this_year$Oratio)] = 0
         this_year$maxRatio = sapply(1:nrow(this_year), function(i){
-          max(this_year$Dratio[i], this_year$Rratio[i])})
+          max(this_year$Dratio[i], this_year$Rratio[i], this_year$Oratio[i])})
         this_year$maxParty = sapply(1:nrow(this_year), function(i){
-          c(c("Democratic", "Republican")[which(c(this_year$Dratio[i], this_year$Rratio[i]) == this_year$maxRatio[i])])[1]})
+          c(c("Democratic", "Republican", "Other")[which(c(this_year$Dratio[i], this_year$Rratio[i], this_year$Oratio[i]) == this_year$maxRatio[i])])[1]})
         rectangles2 = plyr::join(rectangles, this_year) %>% filter(Party == maxParty)
         myPlot = ggplot() +
           geom_rect(data = rectangles2, 
