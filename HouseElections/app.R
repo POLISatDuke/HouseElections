@@ -5,6 +5,7 @@ library(shinydashboard)
 library(readr)
 library(scales)
 library(statebins)
+library(plotly)
 options(scipen = 999) # Turns of scientific notation
 # Hex color codes for Dem Blue and Rep Red, Plus a Gold Color for Independents/Etc.
 party_colors <- c("Democratic" = "#007AFF", "Republican" = "#FF000A", "Other" = "#FFE300")
@@ -153,10 +154,10 @@ rectangles = rbind(statebins_coords %>% mutate(Party = "Republican"),
                    statebins_coords %>% mutate(Party = "Other")) %>% 
   mutate(xmin = x-.42, xmax = x+.42, ymin = y-.42, ymax = y+.42,
          abbr = rep(c("HI", "AK", "CA", "OR", "WA", "AZ", "UT", "NV", "ID",
-                  "NM", "CO", "WY", "MT", "TX", "OK", "KA", "NE", "SD", "ND",
-                  "LA", "AS", "MO", "IA", "MN", "MS", "TN", "KY", "IN", "IL", "WI",
-                  "AL", "NC", "WV", "OH", "MI", "GA", "SC" , "VA", "PA",
-                  "FL", "DC", "MD", "NJ", "NY", "DL", "CT", "MA", "VT", "RI", "NH", "ME"),3))
+                      "NM", "CO", "WY", "MT", "TX", "OK", "KA", "NE", "SD", "ND",
+                      "LA", "AS", "MO", "IA", "MN", "MS", "TN", "KY", "IN", "IL", "WI",
+                      "AL", "NC", "WV", "OH", "MI", "GA", "SC" , "VA", "PA",
+                      "FL", "DC", "MD", "NJ", "NY", "DL", "CT", "MA", "VT", "RI", "NH", "ME"),3))
 # Set up App User Interface
 ui = dashboardPage(
   dashboardHeader(title = "U.S. House Elections"),
@@ -242,11 +243,11 @@ server = function(input, output, session){
   output$polisLogo = renderImage({
     return(list(src = "./polis-logo.jpg", contentType = "image/jpg", 
                 alt = "Alignment", width = 300, height = 60))}, deleteFile = FALSE)
-
+  
   output$polisLogo2 = renderImage({
     return(list(src = "./polis-logo.jpg", contentType = "image/jpg", 
                 alt = "Alignment", width = 300, height = 60))}, deleteFile = FALSE)
-
+  
   # Sidebar menu is an output object so it may react to user inputs.
   output$sidebar = renderMenu({
     sidebarMenu(
@@ -570,10 +571,10 @@ server = function(input, output, session){
       mutate("% Dem." = percent(Dperc), "% Rep." = percent(Rperc), "% Other" = percent(Operc)) %>%
       select(Year, State, District, Winner, Democrat, Republican, Other, Total, "% Dem.", "% Rep.", "% Other") %>%
       rename("Democratic" = Democrat)},     
-  options = list(
-    # Display options for the table
-    pageLength = 10,
-    searching = FALSE))
+    options = list(
+      # Display options for the table
+      pageLength = 10,
+      searching = FALSE))
   # Below renders district competitiveness graph for clicked state
   output$state_info = renderUI({
     if(input$party == "Election Summary"){
@@ -602,20 +603,59 @@ server = function(input, output, session){
                        "</center></br><center>Other Votes (%):", round(stateInfo$Operc,2), "</center>")}
       HTML(ui_out) # There could probably be a neat graph added here (ratio vs time. colored by party?)
     } else {
-    # Find clicked state
-    nearestState = NA
-    #print(input$plot_click)
-    if(!is.null(input$plot_click)){
-      nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
-    #print(nearestState)
-    if(!is.na(nearestState)){
-      # Filters data
-      stateInfo = elections %>% filter(State == as.character(nearestState))
-      output$statePlot = renderPlot({ggplot() + 
-          geom_point(data = stateInfo, aes(x = Year, y = Dperc))})
-      plotOutput("statePlot")
-    } else {
-      # If a state isn't selected display this tooltip.
-      HTML("Choose a state and party to see how district competitiveness stacks up over time.")}}})}
+      # Find clicked state
+      nearestState = NA
+      #print(input$plot_click)
+      if(!is.null(input$plot_click)){
+        nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
+      #print(nearestState)
+      if(!is.na(nearestState)){
+        # Filters data
+        stateInfo = elections %>% filter(State == as.character(nearestState))
+        stateInfo = rbind(
+          stateInfo %>% group_by(Year) %>% 
+            summarise(Party = "Democratic", 
+                      VoteShare = sum(Democrat) / (sum(Democrat+Republican+Other)),
+                      SeatShare = sum(Winner == "D") / n()),
+          stateInfo %>% group_by(Year) %>% 
+            summarise(Party = "Republican", 
+                      VoteShare = sum(Republican) / (sum(Democrat+Republican+Other)),
+                      SeatShare = sum(Winner == "R") / n()),
+          stateInfo %>% group_by(Year) %>% 
+            summarise(Party = "Other", 
+                      VoteShare = sum(Other) / (sum(Democrat+Republican+Other)),
+                      SeatShare = sum(Winner == "O") / n())) %>% 
+          filter(Party == input$party)
+        output$statePlot = renderPlotly({
+          p = ggplot() + 
+            geom_point(data = stateInfo, aes(x = VoteShare, 
+                                             y = SeatShare, 
+                                             frame = Year),
+                       color = party_colors[input$party],
+                       size = 5) +
+            geom_text(data = stateInfo %>% 
+                        filter(Year %% 5 == 0 | Year == min(Year) | Year == max(Year)), 
+                      alpha = 0.5,
+                      aes(x = VoteShare, y = SeatShare, label = Year)) +
+            geom_point(data = stateInfo, size = 2, alpha = 0.25, color = party_colors[input$party],
+                       aes(x = VoteShare, y = SeatShare,
+                           text = paste0(
+                             Year, 
+                             "<br>Votes: ", 100*round(VoteShare,3), "%",
+                             "<br>Reps: ", 100*round(SeatShare, 3),"%"))) +
+            geom_abline(intercept = 0, slope = 1) +
+            ggtitle(paste(as.character(nearestState), "Elections")) + xlab("Vote Fraction") + ylab("Representatives Fraction")
+          
+          p = ggplotly(p, tooltip = c("text")) %>%
+            animation_opts(1000, easing = "quad")
+          p})
+        list(plotlyOutput("statePlot"),
+             HTML("The black line represents perfect representation: the fraction of voters for a particular party 
+                  is exactly the fraction of the state's representatives that are from that party. Parties above the line are over-represented;
+                  they have a larger share of the state's representatives than the state's votes.
+                  <br>Hit play to watch the state's representation change over time. Hover over points to view precise values."))
+      } else {
+        # If a state isn't selected display this tooltip.
+        HTML("Choose a state and party to see how district competitiveness stacks up over time.")}}})}
 # Runs app
 shinyApp(ui, server)
