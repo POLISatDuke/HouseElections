@@ -109,16 +109,21 @@ elections_state_year = elections %>%
 elections_state_year = elections_state_year %>% complete(State, Year = full_seq(Year, 2))
 elections_state_year$caption = paste0(elections_state_year$R, "R-", elections_state_year$D, "D")
 elections_state_year$id = tolower(elections_state_year$State)
-election_summary_state_year = elections_state_year %>% 
-  select("id", "State", "Year", "R", "D", "O", "Rperc", "Dperc", "Operc") %>%
-  mutate(Rratio = (Dperc + Operc) / Rperc * R / (D + O),
-         Dratio = (Rperc + Operc) / Dperc * D / (R + O),
-         Oratio = (Dperc + Rperc) / Operc * O / (D + R),
-         maxRatio = max(Rratio, Dratio, Oratio),
-         maxParty = case_when(
-           maxRatio == Rratio ~ "Republican",
-           maxRatio == Dratio ~ "Democratic",
-           maxRatio == Oratio ~ "Other"))
+# State-level calculations of fraction of votes by party, fraction of seats by party, and the ratio of the two
+elections_state_year$Dfrac = elections_state_year$Dperc / (elections_state_year$Dperc + elections_state_year$Operc + elections_state_year$Rperc)
+elections_state_year$Ofrac = elections_state_year$Operc / (elections_state_year$Dperc + elections_state_year$Operc + elections_state_year$Rperc)
+elections_state_year$Rfrac = elections_state_year$Rperc / (elections_state_year$Dperc + elections_state_year$Operc + elections_state_year$Rperc)
+elections_state_year$Dratio = (elections_state_year$D / (elections_state_year$D + elections_state_year$R + elections_state_year$O)) / elections_state_year$Dfrac
+elections_state_year$Rratio = (elections_state_year$R / (elections_state_year$D + elections_state_year$R + elections_state_year$O)) / elections_state_year$Rfrac
+elections_state_year$Oratio = (elections_state_year$O / (elections_state_year$D + elections_state_year$R + elections_state_year$O)) / elections_state_year$Ofrac
+elections_state_year$Dratio[is.nan(elections_state_year$Dratio)|is.na(elections_state_year$Dratio)] = 0
+elections_state_year$Rratio[is.nan(elections_state_year$Rratio)|is.na(elections_state_year$Rratio)] = 0
+elections_state_year$Oratio[is.nan(elections_state_year$Oratio)|is.na(elections_state_year$Oratio)] = 0
+# Find which ratio is biggest (which party is most overrepresented)
+elections_state_year$maxRatio = sapply(1:nrow(elections_state_year), function(i){
+  max(elections_state_year$Dratio[i], elections_state_year$Rratio[i], elections_state_year$Oratio[i])})
+elections_state_year$maxParty = sapply(1:nrow(elections_state_year), function(i){
+  c(c("Democratic", "Republican", "Other")[which(c(elections_state_year$Dratio[i], elections_state_year$Rratio[i], elections_state_year$Oratio[i]) == elections_state_year$maxRatio[i])])[1]})
 # Statebin Coordinates for clicks
 statebins_coords = data.frame(
   State = c(
@@ -164,50 +169,32 @@ ui = dashboardPage(
   dashboardSidebar(sidebarMenuOutput("sidebar")),
   dashboardBody(
     tabItems(
-      tabItem(
-        tabName = "viz",
-        fluidRow(
-          # Top Row: Title and Logo
-          box(
-            h2("U.S. House Elections"),
+      tabItem(tabName = "viz",
+        fluidRow(# Top Row: Title and Logo
+          box(h2("U.S. House Elections"),
             align = "center",
             width = 7, height = 85),
-          box(
-            imageOutput("polisLogo"),
+          box(imageOutput("polisLogo"),
             align = "center",
             width = 5, height = 85)),
-        fluidRow(
-          # Second Row: Plot Outputs
-          box(
-            plotOutput("map", height = 550, click = clickOpts(id = "plot_click")), 
+        fluidRow(# Second Row: Plot Outputs
+          box(plotOutput("map", height = 550, click = clickOpts(id = "plot_click")), 
             width = 7, height = 575),
-          box(
-            div(uiOutput("state_info")),
+          box(div(uiOutput("state_info")),
             width = 5, height = 575)),
-        fluidRow(
-          # Third Row: Data Table Output
-          box(
-            title = "District Results",
-            HTML("Click on a state to see the results of its districts' elections.</br>
-                 (If no results or zeroes are shown, the data may be missing.)"),
+        fluidRow(# Third Row: Data Table Output
+          box(title = "District Results",
+            HTML("Click on a state to see the results of its districts' elections.</br> (If no results or zeroes are shown, the data may be missing.)"),
             width = 12,
             height = 575,
             collapsible = TRUE,
             div(style = "overflow-x: scroll", dataTableOutput("click_info"))))),
-      tabItem(
-        tabName = "about",
+      tabItem(tabName = "about",
         fluidRow(
-          box(
-            h2("About"),
-            align = "center",
-            width = 6, height = 85),
-          box(
-            imageOutput("polisLogo2"),
-            align = "center",
-            width = 6, height = 85)),
+          box(h2("About"), align = "center", width = 6, height = 85),
+          box(imageOutput("polisLogo2"), align = "center", width = 6, height = 85)),
         fluidRow(
-          box(
-            width = 6, title = HTML("<h2><center>What am I looking at?</h2></center>"),
+          box(width = 6, title = HTML("<h2><center>What am I looking at?</h2></center>"),
             HTML("This visualization shows the results of U.S. House of Representatives elections. 
                   The statebin map on the left side of the page shows the results in a particular year, 
                   which you can selected using the slider input in the sidebar.
@@ -228,14 +215,9 @@ ui = dashboardPage(
                   If a population somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
                   the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
                   This is technically a dictatorship, and certainly not how we should want elections to go.")),
-          box(
-            width = 6, title = HTML("<h2><center>Credits</h2></center>")))))))
+          box(width = 6, title = HTML("<h2><center>Credits</h2></center>")))))))
 
-plottingChoices = c("Vote Share" = "V",
-                    "Winning Votes" = "WiV",
-                    "Losing Votes" = "LV",
-                    "Excess Votes" = "EV",
-                    "Wasted Votes" = "WaV")
+plottingChoices = c("Vote Share" = "V", "Winning Votes" = "WiV", "Losing Votes" = "LV", "Excess Votes" = "EV", "Wasted Votes" = "WaV")
 
 server = function(input, output, session){
   
@@ -304,9 +286,6 @@ server = function(input, output, session){
       # What follows is my janky imitation of a statebins plot
       this_year = elections_state_year %>% filter(Year == input$election)
       if(input$summaryPlot == "V"){
-        this_year$Dfrac = this_year$Dperc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
-        this_year$Ofrac = this_year$Operc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
-        this_year$Rfrac = this_year$Rperc / (this_year$Dperc + this_year$Operc + this_year$Rperc)
         # Plot Order is R, D, and then O, so only need to adjust starting points for latter 2 (others will overwrite)
         rectangles2 = rectangles
         rectangles2$xmin = sapply(1:nrow(rectangles2), function(i){
@@ -327,9 +306,6 @@ server = function(input, output, session){
           scale_fill_manual(values = party_colors) +
           geom_text(data = rectangles2, size = 9, aes(x = x, y = y, label = abbr))}
       if(input$summaryPlot == "S"){
-        this_year$Dfrac = this_year$D / (this_year$D + this_year$O + this_year$R)
-        this_year$Ofrac = this_year$O / (this_year$D + this_year$O + this_year$R)
-        this_year$Rfrac = this_year$R / (this_year$D + this_year$O + this_year$R)
         rectangles2 = plyr::join(rectangles, this_year)
         rectangles2$xmin = sapply(1:nrow(rectangles2), function(i){
           this_year_state = this_year %>% filter(State == rectangles2$State[i])
@@ -351,22 +327,12 @@ server = function(input, output, session){
           geom_text(data = rectangles2, size = 4, aes(x = x, y = y+.2, label = caption, fontface = "bold"))
       }
       if(input$summaryPlot == "R"){
-        this_year$Dratio = (this_year$D / (this_year$D + this_year$R + this_year$O)) / (this_year$Dperc / (this_year$Dperc + this_year$Rperc + this_year$Operc))
-        this_year$Rratio = (this_year$R / (this_year$D + this_year$R + this_year$O)) / (this_year$Rperc / (this_year$Dperc + this_year$Rperc + this_year$Operc))
-        this_year$Oratio = (this_year$O / (this_year$D + this_year$R + this_year$O)) / (this_year$Operc / (this_year$Dperc + this_year$Rperc + this_year$Operc))
-        this_year$Dratio[is.nan(this_year$Dratio)|is.na(this_year$Dratio)] = 0
-        this_year$Rratio[is.nan(this_year$Rratio)|is.na(this_year$Rratio)] = 0
-        this_year$Oratio[is.nan(this_year$Oratio)|is.na(this_year$Oratio)] = 0
-        this_year$maxRatio = sapply(1:nrow(this_year), function(i){
-          max(this_year$Dratio[i], this_year$Rratio[i], this_year$Oratio[i])})
-        this_year$maxParty = sapply(1:nrow(this_year), function(i){
-          c(c("Democratic", "Republican", "Other")[which(c(this_year$Dratio[i], this_year$Rratio[i], this_year$Oratio[i]) == this_year$maxRatio[i])])[1]})
         rectangles2 = plyr::join(rectangles, this_year) %>% filter(Party == maxParty)
         myPlot = ggplot() +
           geom_rect(data = rectangles2, 
                     mapping = aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax = ymax, fill = Party, alpha = maxRatio)) +
           theme_void() +
-          ggtitle("Over-representation in the U.S. House of Representatives") +
+          ggtitle("Over-Representation in the\nU.S. House of Representatives") +
           theme(plot.title = element_text(size = 25, hjust = 0.5, vjust = -5)) +
           guides(fill = guide_legend(title = "Most Overrepresented Party", 
                                      title.theme = element_text(size = 20), 
@@ -580,8 +546,12 @@ server = function(input, output, session){
       searching = FALSE))
   # Below renders district competitiveness graph for clicked state
   output$state_info = renderUI({
+    # Find clicked state
+    nearestState = NA
+    if(!is.null(input$plot_click)){
+      nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
     if(input$party == "Election Summary"){
-      ui_out = "</br><center><h4>Visualizing U.S. House of Representatives Elections</h4></center>
+      ui_out = "</br><center><h3>Visualizing U.S. House of Representatives Elections</h3></center>
       </br>If you choose 'Votes by Party' or 'House Seats by Party', each state will be colored in 
       proportion to the fraction of votes or representatives belonging to a particular party.
       The 'Representation Ratio' is calculated by dividing the proportion of elected representatives from
@@ -590,12 +560,6 @@ server = function(input, output, session){
       by which party is most overrepresented and saturated according to the scale of over-representation.
       </br>To start, try comparing Maryland and North Carolina's over-representation from 2000 to 2010 
       to those same states since 2010. You can also click on a state to see more details."
-      # Find clicked state
-      nearestState = NA
-      #print(input$plot_click)
-      if(!is.null(input$plot_click)){
-        nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
-      #print(nearestState)
       if(!is.na(nearestState)){
         # Filters data
         stateInfo = elections_state_year %>% filter(State == as.character(nearestState), Year == input$election)
@@ -606,44 +570,28 @@ server = function(input, output, session){
                        "</center></br><center>Other Votes (%):", round(stateInfo$Operc,2), "</center>")}
       HTML(ui_out) # There could probably be a neat graph added here (ratio vs time. colored by party?)
     } else {
-      # Find clicked state
-      nearestState = NA
-      #print(input$plot_click)
-      if(!is.null(input$plot_click)){
-        nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
-      #print(nearestState)
       if(!is.na(nearestState)){
         # Filters data
         stateInfo = elections %>% filter(State == as.character(nearestState))
         stateInfo = rbind(
           stateInfo %>% group_by(Year) %>% 
-            summarise(Party = "Democratic", 
-                      VoteShare = sum(Democrat) / (sum(Democrat+Republican+Other)),
+            summarise(Party = "Democratic", VoteShare = sum(Democrat) / (sum(Democrat+Republican+Other)),
                       SeatShare = sum(Winner == "D") / n()),
           stateInfo %>% group_by(Year) %>% 
-            summarise(Party = "Republican", 
-                      VoteShare = sum(Republican) / (sum(Democrat+Republican+Other)),
+            summarise(Party = "Republican", VoteShare = sum(Republican) / (sum(Democrat+Republican+Other)),
                       SeatShare = sum(Winner == "R") / n()),
           stateInfo %>% group_by(Year) %>% 
-            summarise(Party = "Other", 
-                      VoteShare = sum(Other) / (sum(Democrat+Republican+Other)),
+            summarise(Party = "Other", VoteShare = sum(Other) / (sum(Democrat+Republican+Other)),
                       SeatShare = sum(Winner == "O") / n())) %>% 
           filter(Party == input$party)
         output$statePlot = renderPlotly({
           p = ggplot() + 
-            geom_point(data = stateInfo, aes(x = VoteShare, 
-                                             y = SeatShare, 
-                                             frame = Year),
-                       color = party_colors[input$party],
-                       size = 5) +
-            geom_text(data = stateInfo %>% 
-                        filter(Year %% 5 == 0 | Year == min(Year) | Year == max(Year)), 
-                      alpha = 0.5,
-                      aes(x = VoteShare, y = SeatShare, label = Year)) +
+            geom_point(data = stateInfo, aes(x = VoteShare, y = SeatShare, frame = Year),
+                       color = party_colors[input$party], size = 5) +
+            geom_text(data = stateInfo %>% filter(Year %% 5 == 0 | Year == min(Year) | Year == max(Year)), 
+                      alpha = 0.5, aes(x = VoteShare, y = SeatShare, label = Year)) +
             geom_point(data = stateInfo, size = 2, alpha = 0.25, color = party_colors[input$party],
-                       aes(x = VoteShare, y = SeatShare,
-                           text = paste0(
-                             Year, 
+                       aes(x = VoteShare, y = SeatShare, text = paste0(Year, 
                              "<br>Votes: ", 100*round(VoteShare,3), "%",
                              "<br>Reps: ", 100*round(SeatShare, 3),"%"))) +
             geom_abline(intercept = 0, slope = 1) +
@@ -659,6 +607,6 @@ server = function(input, output, session){
                   <br>Hit play to watch the state's representation change over time. Hover over points to view precise values."))
       } else {
         # If a state isn't selected display this tooltip.
-        HTML("Choose a state and party to see how district competitiveness stacks up over time.")}}})}
+        HTML("<h3>Choose a state and party to see how district competitiveness stacks up over time.</h3>")}}})}
 # Runs app
 shinyApp(ui, server)
