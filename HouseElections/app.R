@@ -170,32 +170,32 @@ ui = dashboardPage(
   dashboardBody(
     tabItems(
       tabItem(tabName = "viz",
-        fluidRow(# Top Row: Title and Logo
-          box(h2("U.S. House Elections"),
-            align = "center",
-            width = 7, height = 85),
-          box(imageOutput("polisLogo"),
-            align = "center",
-            width = 5, height = 85)),
-        fluidRow(# Second Row: Plot Outputs
-          box(plotOutput("map", height = 550, click = clickOpts(id = "plot_click")), 
-            width = 7, height = 575),
-          box(div(uiOutput("state_info")),
-            width = 5, height = 575)),
-        fluidRow(# Third Row: Data Table Output
-          box(title = "District Results",
-            HTML("Click on a state to see the results of its districts' elections.</br> (If no results or zeroes are shown, the data may be missing.)"),
-            width = 12,
-            height = 575,
-            collapsible = TRUE,
-            div(style = "overflow-x: scroll", dataTableOutput("click_info"))))),
+              fluidRow(# Top Row: Title and Logo
+                box(h2("U.S. House Elections"),
+                    align = "center",
+                    width = 7, height = 85),
+                box(imageOutput("polisLogo"),
+                    align = "center",
+                    width = 5, height = 85)),
+              fluidRow(# Second Row: Plot Outputs
+                box(plotOutput("map", height = 550, click = clickOpts(id = "plot_click")), 
+                    width = 7, height = 575),
+                box(div(uiOutput("state_info")),
+                    width = 5, height = 575)),
+              fluidRow(# Third Row: Data Table Output
+                box(title = "District Results",
+                    HTML("Click on a state to see the results of its districts' elections.</br> (If no results or zeroes are shown, the data may be missing.)"),
+                    width = 12,
+                    height = 575,
+                    collapsible = TRUE,
+                    div(style = "overflow-x: scroll", dataTableOutput("click_info"))))),
       tabItem(tabName = "about",
-        fluidRow(
-          box(h2("About"), align = "center", width = 6, height = 85),
-          box(imageOutput("polisLogo2"), align = "center", width = 6, height = 85)),
-        fluidRow(
-          box(width = 6, title = HTML("<h2><center>What am I looking at?</h2></center>"),
-            HTML("This visualization shows the results of U.S. House of Representatives elections. 
+              fluidRow(
+                box(h2("About"), align = "center", width = 6, height = 85),
+                box(imageOutput("polisLogo2"), align = "center", width = 6, height = 85)),
+              fluidRow(
+                box(width = 6, title = HTML("<h2><center>What am I looking at?</h2></center>"),
+                    HTML("This visualization shows the results of U.S. House of Representatives elections. 
                   The statebin map on the left side of the page shows the results in a particular year, 
                   which you can selected using the slider input in the sidebar.
                   In the election summary view, you can compare how well a state's elected officials actually match the
@@ -215,7 +215,7 @@ ui = dashboardPage(
                   If a population somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
                   the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
                   This is technically a dictatorship, and certainly not how we should want elections to go.")),
-          box(width = 6, title = HTML("<h2><center>Credits</h2></center>")))))))
+                box(width = 6, title = HTML("<h2><center>Credits</h2></center>")))))))
 
 plottingChoices = c("Vote Share" = "V", "Winning Votes" = "WiV", "Losing Votes" = "LV", "Excess Votes" = "EV", "Wasted Votes" = "WaV")
 
@@ -552,23 +552,60 @@ server = function(input, output, session){
       nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
     if(input$party == "Election Summary"){
       ui_out = "</br><center><h3>Visualizing U.S. House of Representatives Elections</h3></center>
-      </br>If you choose 'Votes by Party' or 'House Seats by Party', each state will be colored in 
-      proportion to the fraction of votes or representatives belonging to a particular party.
-      The 'Representation Ratio' is calculated by dividing the proportion of elected representatives from
-      a party by the proportion of votes won by that same party. For example, a Repubiclan ratio of 2 means that,
+      </br>The 'Representation Ratio' is calculated by dividing the proportion of elected representatives from
+      a party by the proportion of votes won by that party. For example, a Repubiclan ratio of 2 means that,
       by proportion, there are twice as many Republican representatives as Republican votes. States are colored
       by which party is most overrepresented and saturated according to the scale of over-representation.
-      </br>To start, try comparing Maryland and North Carolina's over-representation from 2000 to 2010 
-      to those same states since 2010. You can also click on a state to see more details."
+      </br>If you choose 'Votes by Party' or 'House Seats by Party', each state will be colored in 
+      proportion to the fraction of votes or representatives belonging to a particular party. Click on a state to see
+      a time series graph."
       if(!is.na(nearestState)){
         # Filters data
         stateInfo = elections_state_year %>% filter(State == as.character(nearestState), Year == input$election)
-        ui_out = paste(ui_out, "</br><h4><center>", nearestState, input$election, "</h4></center><center>",
-                       as.character(stateInfo$Reps), "Representative(s) Elected,", stateInfo$caption, 
-                       "</center></br><center>Democratic Votes (%):", round(stateInfo$Dperc,2), 
-                       "</center></br><center>Republican Votes (%):", round(stateInfo$Rperc,2),
-                       "</center></br><center>Other Votes (%):", round(stateInfo$Operc,2), "</center>")}
-      HTML(ui_out) # There could probably be a neat graph added here (ratio vs time. colored by party?)
+        # There could probably be a neat graph added here (ratio vs time. colored by party?)
+        output$ratio_time = renderPlot({
+          if(input$summaryPlot == "R"){
+            a = ggplot(data = elections_state_year %>% filter(State == nearestState) %>% drop_na(Dratio, Rratio, Oratio)) +
+              theme(panel.background = element_blank()) + 
+              geom_path(aes(x = Year, y = Dratio), color = party_colors[1]) +
+              geom_path(aes(x = Year, y = Rratio), color = party_colors[2]) +
+              geom_path(aes(x = Year, y = Oratio), color = party_colors[3]) +
+              geom_point(aes(x = Year, y = Dratio), color = party_colors[1], size = 2) +
+              geom_point(aes(x = Year, y = Rratio), color = party_colors[2], size = 2) +
+              geom_point(aes(x = Year, y = Oratio), color = party_colors[3], size = 2) +
+              geom_hline(aes(yintercept = 1), alpha=0.5) +
+              ggtitle(paste(nearestState, "Representation Ratio by Party")) +
+              ylab("Representation Ratio")
+          }
+          if(input$summaryPlot == "S"){
+            a = ggplot(data = elections_state_year %>% filter(State == nearestState) %>% drop_na(D, R, O)) +
+              theme(panel.background = element_blank()) +
+              geom_path(aes(x = Year, y = D), color = party_colors[1]) +
+              geom_path(aes(x = Year, y = R), color = party_colors[2]) +
+              geom_path(aes(x = Year, y = O), color = party_colors[3]) +
+              geom_point(aes(x = Year, y = D), color = party_colors[1], size = 2) +
+              geom_point(aes(x = Year, y = R), color = party_colors[2], size = 2) +
+              geom_point(aes(x = Year, y = O), color = party_colors[3], size = 2) +
+              ggtitle(paste(nearestState, "House Representation by Party")) +
+              ylab("Number of Representatives")
+          }
+          if(input$summaryPlot == "V"){
+            a = ggplot(data = elections_state_year %>% filter(State == nearestState) %>% drop_na(Dperc, Rperc, Operc)) +
+              theme(panel.background = element_blank()) +
+              geom_path(aes(x = Year, y = Dperc), color = party_colors[1]) +
+              geom_path(aes(x = Year, y = Rperc), color = party_colors[2]) +
+              geom_path(aes(x = Year, y = Operc), color = party_colors[3]) +
+              geom_point(aes(x = Year, y = Dperc), color = party_colors[1], size = 2) +
+              geom_point(aes(x = Year, y = Rperc), color = party_colors[2], size = 2) +
+              geom_point(aes(x = Year, y = Operc), color = party_colors[3], size = 2) +
+              ggtitle(paste("Vote Share by Party in", nearestState)) +
+              ylab("Percentage of Votes")
+          }
+          a})
+        list(HTML(ui_out),plotOutput("ratio_time", width = "auto", height = 250))}
+      else{
+        HTML(ui_out)
+      }
     } else {
       if(!is.na(nearestState)){
         # Filters data
@@ -592,13 +629,13 @@ server = function(input, output, session){
                       alpha = 0.5, aes(x = VoteShare, y = SeatShare, label = Year)) +
             geom_point(data = stateInfo, size = 2, alpha = 0.25, color = party_colors[input$party],
                        aes(x = VoteShare, y = SeatShare, text = paste0(Year, 
-                             "<br>Votes: ", 100*round(VoteShare,3), "%",
-                             "<br>Reps: ", 100*round(SeatShare, 3),"%"))) +
+                                                                       "<br>Votes: ", 100*round(VoteShare,3), "%",
+                                                                       "<br>Reps: ", 100*round(SeatShare, 3),"%"))) +
             geom_abline(intercept = 0, slope = 1) +
             ggtitle(paste(as.character(nearestState), "Elections")) + xlab("Vote Fraction") + ylab("Representatives Fraction")
           
           p = ggplotly(p, tooltip = c("text")) %>%
-            animation_opts(1000, easing = "quad")
+            animation_opts(1000, easing = "cubic-in-out")
           p})
         list(plotlyOutput("statePlot"),
              HTML("The black line represents perfect representation: the fraction of voters for a particular party 
