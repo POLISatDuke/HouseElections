@@ -124,31 +124,27 @@ elections_state_year$maxRatio = sapply(1:nrow(elections_state_year), function(i)
   max(elections_state_year$Dratio[i], elections_state_year$Rratio[i], elections_state_year$Oratio[i])})
 elections_state_year$maxParty = sapply(1:nrow(elections_state_year), function(i){
   c(c("Democratic", "Republican", "Other")[which(c(elections_state_year$Dratio[i], elections_state_year$Rratio[i], elections_state_year$Oratio[i]) == elections_state_year$maxRatio[i])])[1]})
+elections_state_year$maxParty = factor(elections_state_year$maxParty, levels = c("Democratic", "Republican", "Other"))
 # Statebin Coordinates for clicks
 statebins_coords = data.frame(
   State = c(
     "Hawaii", "Alaska", 
     "California", "Oregon", "Washington",
     "Arizona", "Utah", "Nevada", "Idaho",
-    
     "New Mexico", "Colorado", "Wyoming", "Montana",
     "Texas", "Oklahoma", "Kansas", "Nebraska", "South Dakota", "North Dakota",
     "Louisiana", "Arkansas", "Missouri", "Iowa", "Minnesota",
-    
     "Mississippi", "Tennessee", "Kentucky", "Indiana", "Illinois", "Wisconsin",
     "Alabama", "North Carolina", "West Virginia", "Ohio", "Michigan",
     "Georgia", "South Carolina", "Virginia", "Pennsylvania",
-    
     "Florida", "District of Columbia", "Maryland", "New Jersey", "New York",
     "Delaware", "Connecticut", "Massachusetts", "Vermont",
     "Rhode Island", "New Hampshire", "Maine"),
-  x = c(
-    rep(1, 2), rep(2, 3), rep(3, 4),
+  x = c(rep(1, 2), rep(2, 3), rep(3, 4),
     rep(4, 4), rep(5, 6), rep(6, 5),
     rep(7, 6), rep(8, 5), rep(9, 4),
     rep(10, 5), rep(11, 4), rep(12, 3)),
-  y = c(
-    8, 7, 5:3, 6:3,
+  y = c(8, 7, 5:3, 6:3,
     6:3, 8:3, 7:3,
     7:2, 7:3, 7:4,
     8, 6:3, 5:2, 
@@ -163,6 +159,7 @@ rectangles = rbind(statebins_coords %>% mutate(Party = "Republican"),
                       "LA", "AS", "MO", "IA", "MN", "MS", "TN", "KY", "IN", "IL", "WI",
                       "AL", "NC", "WV", "OH", "MI", "GA", "SC" , "VA", "PA",
                       "FL", "DC", "MD", "NJ", "NY", "DL", "CT", "MA", "VT", "RI", "NH", "ME"),3))
+rectangles$Party = factor(rectangles$Party, levels = c("Democratic", "Republican", "Other"))
 # Set up App User Interface
 ui = dashboardPage(
   dashboardHeader(title = "U.S. House Elections"),
@@ -199,19 +196,19 @@ ui = dashboardPage(
                   The statebin map on the left side of the page shows the results in a particular year, 
                   which you can selected using the slider input in the sidebar.
                   In the election summary view, you can compare how well a state's elected officials actually match the
-                  votes cast on election day (in terms of party membership) using the 'Representation Ratio'. 
+                  votes cast on election day (in terms of party membership) using the \"Representation Ratio.\" 
                   This is a limited measure, since smaller states with only one or a small number of 
                   districts will naturally have higher ratios and not all vote count data are available. But there are larger states
                   that consistently over-represent particular parties, which could indicate gerrymandering.
                   </br>If you select one of the major parties (step 2), the states will colored according to the criterion you choose:
-                  </br>'Winning Votes' shows the percentage of votes cast for candidates of the chosen party that won their election.
-                  </br>'Losing Votes' is the opposite; it shows what fraction of a party's votes went to losing candidates.
-                  </br>'Excess Votes' is the difference between the winner's vote share and the runner-up's vote share.
+                  </br>\"Winning Votes\" shows the percentage of votes cast for candidates of the chosen party that won their election.
+                  </br>\"Losing Votes\" is the opposite; it shows what fraction of a party's votes went to losing candidates.
+                  </br>\"Excess Votes\" is the difference between the winner's vote share and the runner-up's vote share.
                   It is smaller in close elections and larger in landslides.
-                  </br> 'Wasted Votes' is the percentage of votes that were cast for a losing candidate or for a winning candidate in excess of the runner-up.
+                  </br> \"Wasted Votes\" is the percentage of votes that were cast for a losing candidate or for a winning candidate in excess of the runner-up.
                   In principle, these people could have stayed home on election day and the result of the election would not have changed. (Losing + Excess = Wasted).
-                  </br><center><h4>'Wasted Votes'?</h4></center>
-                  We show 'Wasted' votes here as a crude measure of how well-represented a state's electorate is, but the name 'wasted' is imprecise and should not be taken too seriously.
+                  </br><center><h4>\"Wasted Votes\"?</h4></center>
+                  We show \"wasted\" votes here as a crude measure of how well-represented a state's electorate is, but the name \"wasted\" is imprecise and should not be taken too seriously.
                   If a population somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
                   the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
                   This is technically a dictatorship, and certainly not how we should want elections to go.")),
@@ -239,7 +236,7 @@ server = function(input, output, session){
       conditionalPanel(
         "input.sidebarmenu == 'viz'", # Displays only if 'viz' panel is being viewed. 
         # This panel shows options for mapping.
-        HTML("</br><center>1. Choose which year's</br>election to view,or hit 'play'</br>to see a time-lapse.</center>"),
+        HTML("</br><center>1. Choose which year's</br>election to view, or hit \"play\"</br>to see a time-lapse.</center>"),
         sliderInput(
           # Slider to select year.
           inputId = "election",
@@ -252,7 +249,7 @@ server = function(input, output, session){
           width = 300,
           ticks = FALSE,
           sep = ""),
-        HTML("</br><center>2. Choose a party to see</br>detailed stats, or 'All' for a</br>state-by-state summary.</center>"),
+        HTML("</br><center>2. Choose a party to see</br>detailed stats, or \"Election Summary\" for a</br>state-by-state summary.</center>"),
         radioButtons(
           # Buttons to select party.
           inputId = "party",
@@ -260,7 +257,7 @@ server = function(input, output, session){
           choices = c("Election Summary", "Democratic", "Republican"),
           selected = "Election Summary"),
         HTML("</br><center>3. Choose which data to plot.
-             </br>See 'About' Tab for details.</center>"),
+             </br>See \"About\" Tab for details.</center>"),
         conditionalPanel(
           "input.party != 'Election Summary'",
           radioButtons(
@@ -294,8 +291,7 @@ server = function(input, output, session){
             this_year_state$Rfrac * as.numeric(rectangles2$Party[i] != "Republican") +
               this_year_state$Dfrac * as.numeric(rectangles2$Party[i] == "Other"))})
         myPlot = ggplot() +
-          geom_rect(data = rectangles2, 
-                    mapping = aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax = ymax, fill = Party)) +
+          geom_rect(data = rectangles2, mapping = aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax = ymax, fill = Party)) +
           theme_void() +
           ggtitle("Voting Distributions by State") +
           theme(plot.title = element_text(size = 25, hjust = 0.5, vjust = -5)) +
@@ -310,8 +306,8 @@ server = function(input, output, session){
         rectangles2$xmin = sapply(1:nrow(rectangles2), function(i){
           this_year_state = this_year %>% filter(State == rectangles2$State[i])
           rectangles2$xmin[i] + 0.84 * ( 
-            this_year_state$Rfrac * as.numeric(rectangles2$Party[i] != "Republican") +
-              this_year_state$Dfrac * as.numeric(rectangles2$Party[i] == "Other"))})
+            this_year_state$R / (this_year_state$R + this_year_state$D + this_year_state$O) * as.numeric(rectangles2$Party[i] != "Republican") +
+              this_year_state$D / (this_year_state$R + this_year_state$D + this_year_state$O) * as.numeric(rectangles2$Party[i] == "Other"))})
         myPlot = ggplot() +
           geom_rect(data = rectangles2, 
                     mapping = aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax = ymax, fill = Party)) +
@@ -552,11 +548,11 @@ server = function(input, output, session){
       nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
     if(input$party == "Election Summary"){
       ui_out = "</br><center><h3>Visualizing U.S. House of Representatives Elections</h3></center>
-      </br>The 'Representation Ratio' is calculated by dividing the proportion of elected representatives from
-      a party by the proportion of votes won by that party. For example, a Repubiclan ratio of 2 means that,
+      </br>The \"Representation Ratio\" is calculated by dividing the proportion of elected representatives from
+      a party by the proportion of votes won by that party. For example, a Republican ratio of 2 means that,
       by proportion, there are twice as many Republican representatives as Republican votes. States are colored
       by which party is most overrepresented and saturated according to the scale of over-representation.
-      </br>If you choose 'Votes by Party' or 'House Seats by Party', each state will be colored in 
+      </br>If you choose \"Votes by Party\" or \"House Seats by Party,\" each state will be colored in 
       proportion to the fraction of votes or representatives belonging to a particular party. Click on a state to see
       a time series graph."
       if(!is.na(nearestState)){
@@ -565,41 +561,53 @@ server = function(input, output, session){
         # There could probably be a neat graph added here (ratio vs time. colored by party?)
         output$ratio_time = renderPlot({
           if(input$summaryPlot == "R"){
-            a = ggplot(data = elections_state_year %>% filter(State == nearestState) %>% drop_na(Dratio, Rratio, Oratio)) +
+            d = elections_state_year %>% filter(State == nearestState) %>% drop_na(Dratio, Rratio, Oratio)
+            a = ggplot(data = d) +
               theme(panel.background = element_blank()) + 
               geom_path(aes(x = Year, y = Dratio), color = party_colors[1]) +
               geom_path(aes(x = Year, y = Rratio), color = party_colors[2]) +
-              geom_path(aes(x = Year, y = Oratio), color = party_colors[3]) +
               geom_point(aes(x = Year, y = Dratio), color = party_colors[1], size = 2) +
               geom_point(aes(x = Year, y = Rratio), color = party_colors[2], size = 2) +
-              geom_point(aes(x = Year, y = Oratio), color = party_colors[3], size = 2) +
               geom_hline(aes(yintercept = 1), alpha=0.5) +
               ggtitle(paste(nearestState, "Representation Ratio by Party")) +
               ylab("Representation Ratio")
+            if(any(d$Oratio != 0)){
+              a = a +
+                geom_path(aes(x = Year, y = Oratio), color = party_colors[3]) +
+                geom_point(aes(x = Year, y = Oratio), color = party_colors[3], size = 2)
+            }
           }
           if(input$summaryPlot == "S"){
-            a = ggplot(data = elections_state_year %>% filter(State == nearestState) %>% drop_na(D, R, O)) +
+            d = elections_state_year %>% filter(State == nearestState) %>% drop_na(D, R, O)
+            a = ggplot(data = d) +
               theme(panel.background = element_blank()) +
               geom_path(aes(x = Year, y = D), color = party_colors[1]) +
               geom_path(aes(x = Year, y = R), color = party_colors[2]) +
-              geom_path(aes(x = Year, y = O), color = party_colors[3]) +
               geom_point(aes(x = Year, y = D), color = party_colors[1], size = 2) +
               geom_point(aes(x = Year, y = R), color = party_colors[2], size = 2) +
-              geom_point(aes(x = Year, y = O), color = party_colors[3], size = 2) +
               ggtitle(paste(nearestState, "House Representation by Party")) +
               ylab("Number of Representatives")
+            if(any(d$O > 0)){
+              a = a +
+                geom_path(aes(x = Year, y = O), color = party_colors[3]) +
+                geom_point(aes(x = Year, y = O), color = party_colors[3], size = 2)
+            }
           }
           if(input$summaryPlot == "V"){
-            a = ggplot(data = elections_state_year %>% filter(State == nearestState) %>% drop_na(Dperc, Rperc, Operc)) +
+            d = elections_state_year %>% filter(State == nearestState) %>% drop_na(Dperc, Rperc, Operc)
+            a = ggplot(data = d) +
               theme(panel.background = element_blank()) +
               geom_path(aes(x = Year, y = Dperc), color = party_colors[1]) +
               geom_path(aes(x = Year, y = Rperc), color = party_colors[2]) +
-              geom_path(aes(x = Year, y = Operc), color = party_colors[3]) +
               geom_point(aes(x = Year, y = Dperc), color = party_colors[1], size = 2) +
               geom_point(aes(x = Year, y = Rperc), color = party_colors[2], size = 2) +
-              geom_point(aes(x = Year, y = Operc), color = party_colors[3], size = 2) +
               ggtitle(paste("Vote Share by Party in", nearestState)) +
               ylab("Percentage of Votes")
+            if(any(d$Operc > 15)){
+              a = a + 
+                geom_path(aes(x = Year, y = Operc), color = party_colors[3]) +
+                geom_point(aes(x = Year, y = Operc), color = party_colors[3], size = 2)
+            }
           }
           a})
         list(HTML(ui_out),plotOutput("ratio_time", width = "auto", height = 250))}
@@ -633,7 +641,6 @@ server = function(input, output, session){
                                                                        "<br>Reps: ", 100*round(SeatShare, 3),"%"))) +
             geom_abline(intercept = 0, slope = 1) +
             ggtitle(paste(as.character(nearestState), "Elections")) + xlab("Vote Fraction") + ylab("Representatives Fraction")
-          
           p = ggplotly(p, tooltip = c("text")) %>%
             animation_opts(1000, easing = "cubic-in-out")
           p})
