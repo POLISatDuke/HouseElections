@@ -181,10 +181,10 @@ ui = dashboardPage(
                     width = 5, height = 575)),
               fluidRow(# Third Row: Data Table Output
                 box(title = "District Results",
-                    HTML("Click on a state to see the results of its districts' elections.</br> (If no results or zeroes are shown, the data may be missing.)"),
+                    # HTML("Click on a state to see the results of its districts' elections.</br> (If no results or zeroes are shown, the data may be missing.)"),
                     width = 12,
-                    height = 575,
                     collapsible = TRUE,
+                    collapsed = TRUE,
                     div(style = "overflow-x: scroll", dataTableOutput("click_info"))))),
       tabItem(tabName = "about",
               fluidRow(
@@ -277,7 +277,7 @@ server = function(input, output, session){
             selected = "R"),
           HTML("<center>The Representation Ratio compares</br>the number of Representatives each</br>party elected to the proportion</br>of votes that they won.</center>"))))})
   
-  output$map = renderPlot({
+  output$map = renderPlot(execOnResize = FALSE, {
     # Below Generates plot per plotting options
     if(input$party == "Election Summary"){
       # What follows is my janky imitation of a statebins plot
@@ -547,7 +547,7 @@ server = function(input, output, session){
     if(!is.null(input$plot_click)){
       nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
     if(input$party == "Election Summary"){
-      ui_out = "</br><center><h3>Visualizing U.S. House of Representatives Elections</h3></center>
+      ui_out = "</br><center><h3>Visualizing U.S. House of</br>Representatives Elections</h3></center>
       </br>The \"Representation Ratio\" is calculated by dividing the proportion of elected representatives from
       a party by the proportion of votes won by that party. For example, a Republican ratio of 2 means that,
       by proportion, there are twice as many Republican representatives as Republican votes. States are colored
@@ -559,7 +559,7 @@ server = function(input, output, session){
         # Filters data
         stateInfo = elections_state_year %>% filter(State == as.character(nearestState), Year == input$election)
         # There could probably be a neat graph added here (ratio vs time. colored by party?)
-        output$ratio_time = renderPlot({
+        output$ratio_time = renderPlot(execOnResize = FALSE, {
           if(input$summaryPlot == "R"){
             d = elections_state_year %>% filter(State == nearestState) %>% drop_na(Dratio, Rratio, Oratio)
             a = ggplot(data = d) +
@@ -610,7 +610,7 @@ server = function(input, output, session){
             }
           }
           a})
-        list(HTML(ui_out),plotOutput("ratio_time", width = "auto", height = 250))}
+        list(HTML(ui_out),plotOutput("ratio_time", width = 400, height = 200))}
       else{
         HTML(ui_out)
       }
@@ -629,7 +629,7 @@ server = function(input, output, session){
             summarise(Party = "Other", VoteShare = sum(Other) / (sum(Democrat+Republican+Other)),
                       SeatShare = sum(Winner == "O") / n())) %>% 
           filter(Party == input$party)
-        output$statePlot = renderPlotly({
+        output$statePlot = renderPlotly(execOnResize = FALSE, {
           p = ggplot() + 
             geom_point(data = stateInfo, aes(x = VoteShare, y = SeatShare, frame = Year),
                        color = party_colors[input$party], size = 5) +
