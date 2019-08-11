@@ -191,7 +191,7 @@ ui = dashboardPage(
                 box(h2("About"), align = "center", width = 6, height = 85),
                 box(imageOutput("polisLogo2"), align = "center", width = 6, height = 85)),
               fluidRow(
-                box(width = 6, title = HTML("<h2><center>What am I looking at?</h2></center>"),
+                box(width = 12, title = HTML("<h2><center>What am I looking at?</h2></center>"),
                     HTML("This visualization shows the results of U.S. House of Representatives elections. 
                   The statebin map on the left side of the page shows the results in a particular year, 
                   which you can select using the slider input in the sidebar.
@@ -213,8 +213,14 @@ ui = dashboardPage(
                   We show \"wasted\" votes here as a crude measure of how well-represented a state's electorate is, but the name \"wasted\" is imprecise and should not be taken too literally.
                   If a population somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
                   the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
-                  This is technically a dictatorship, and certainly not how we should want elections to be run.")),
-                box(width = 6, title = HTML("<h2><center>Credits</h2></center>")))))))
+                  This is technically a dictatorship, and certainly not how we should want elections to be run."))),
+              fluidRow(
+                box(width = 12, title = HTML("<h2><center>Credits</h2></center>"),
+                    HTML("<center>This application was created by 
+                    <a href = \"https://www.linkedin.com/in/eidan-jacob/\">Eidan Jacob</a> and researched by Jessica Sullivan with the
+                    <a href = \"https://polis.duke.edu/\">Duke Center for Political Leadership, Innovation and Service</a>. 
+                    Questions can be addressed to POLIS Associate Director B.J. Rudell at <a href = \"mailto:polis@duke.edu\">polis@duke.edu</a>.
+                    </br></br><a href = \"https://github.com/ej68/HouseElections\">Fork this on GitHub</a></center>")))))))
 
 plottingChoices = c("Vote Share" = "V", "Winning Votes" = "WiV", "Losing Votes" = "LV", "Excess Votes" = "EV", "Wasted Votes" = "WaV")
 
@@ -631,7 +637,7 @@ server = function(input, output, session){
             summarise(Party = "Other", VoteShare = sum(Other) / (sum(Democrat+Republican+Other)),
                       SeatShare = sum(Winner == "O") / n())) %>% 
           filter(Party == input$party)
-        output$statePlot = renderPlotly(execOnResize = FALSE, {
+        output$statePlot = renderPlotly({
           p = ggplot() + 
             geom_point(data = stateInfo, aes(x = VoteShare, y = SeatShare, frame = Year),
                        color = party_colors[input$party], size = 5) +
