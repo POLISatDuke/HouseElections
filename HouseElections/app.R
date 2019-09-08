@@ -380,18 +380,10 @@ server = function(input, output, session){
     if(!is.null(input$plot_click)){
       nearestState = nearPoints(statebins_coords, input$plot_click, xvar = "x", yvar = "y", threshold = 40)[1,1]}
     if(input$party == "Election Summary"){
-      ui_out = "</br><center><h3>Visualizing U.S. House of</br>Representatives Elections</h3></center>
-      </br>The \"Representation Ratio\" is calculated by dividing the proportion of elected representatives from
-      a party by the proportion of votes won by that party. For example, a Republican ratio of 2 means that,
-      by proportion, there are twice as many Republican representatives as Republican votes. States are colored
-      by which party is most overrepresented and saturated according to the degree of over-representation.
-      </br>If you choose \"Votes by Party\" or \"House Seats by Party,\" each state will be colored in 
-      proportion to the fraction of votes or representatives belonging to a particular party. Click on a state to see
-      a time series graph."
+      ui_out = read_file("./TextAssets/ElectionSummaryOutput.txt")
       if(!is.na(nearestState)){
         # Filters data
         stateInfo = elections_state_year %>% filter(State == as.character(nearestState), Year == input$election)
-        # There could probably be a neat graph added here (ratio vs time. colored by party?)
         output$ratio_time = renderPlot(execOnResize = FALSE, {
           if(input$summaryPlot == "R"){
             d = elections_state_year %>% filter(State == nearestState) %>% drop_na(Dratio, Rratio, Oratio)
@@ -478,10 +470,7 @@ server = function(input, output, session){
             animation_opts(1000, easing = "cubic-in-out")
           p})
         list(plotlyOutput("statePlot"),
-             HTML("The black line represents perfect representation: the fraction of voters for a particular party 
-                  is exactly the fraction of the state's representatives that are from that party. Parties above the line are over-represented;
-                  they have a larger share of the state's representatives than the state's votes.
-                  <br>Hit play to watch the state's representation change over time. Hover over points to view precise values."))
+             HTML(read_file("./TextAssets/StatePlotOutput.txt")))
       } else {
         # If a state isn't selected display this tooltip.
         HTML("<h3>Choose a state and party to see how district competitiveness stacks up over time.</h3>")}}})}

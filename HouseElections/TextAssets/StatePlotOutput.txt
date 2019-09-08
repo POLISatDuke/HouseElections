@@ -1,0 +1,4 @@
+The black line represents perfect representation: the fraction of voters for a particular party 
+                  is exactly the fraction of the state's representatives that are from that party. Parties above the line are over-represented;
+                  they have a larger share of the state's representatives than the state's votes.
+                  <br>Hit play to watch the state's representation change over time. Hover over points to view precise values.

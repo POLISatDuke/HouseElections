@@ -1,0 +1,8 @@
+</br><center><h3>Visualizing U.S. House of</br>Representatives Elections</h3></center>
+      </br>The "Representation Ratio" is calculated by dividing the proportion of elected representatives from
+      a party by the proportion of votes won by that party. For example, a Republican ratio of 2 means that,
+      by proportion, there are twice as many Republican representatives as Republican votes. States are colored
+      by which party is most overrepresented and saturated according to the degree of over-representation.
+      </br>If you choose "Votes by Party" or "House Seats by Party," each state will be colored in 
+      proportion to the fraction of votes or representatives belonging to a particular party. Click on a state to see
+      a time series graph.
