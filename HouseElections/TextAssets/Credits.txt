@@ -1,0 +1,5 @@
+<center>This application was created by 
+                    <a href = "https://www.linkedin.com/in/eidan-jacob/">Eidan Jacob</a> and researched by Jessica Sullivan with the
+                    <a href = "https://polis.duke.edu/">Duke Center for Political Leadership, Innovation and Service</a>. 
+                    Questions can be addressed to POLIS Associate Director B.J. Rudell at <a href = "mailto:polis@duke.edu">polis@duke.edu</a>.
+                    </br></br><a href = "https://github.com/ej68/HouseElections">Fork this on GitHub</a></center>

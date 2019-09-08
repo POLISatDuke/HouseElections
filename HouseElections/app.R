@@ -42,35 +42,10 @@ ui = dashboardPage(
                 box(imageOutput("polisLogo2"), align = "center", width = 6, height = 85)),
               fluidRow(
                 box(width = 12, title = HTML("<h2><center>What am I looking at?</h2></center>"),
-                    HTML("This visualization shows the results of U.S. House of Representatives elections. 
-                  The statebin map on the left side of the page shows the results in a particular year, 
-                  which you can select using the slider input in the sidebar.
-                  In the election summary view (the default), you can compare how well a state's elected officials actually match the
-                  votes cast on election day (in terms of party membership) using the \"Representation Ratio.\" 
-                  This is a limited measure, since smaller states with only one or a small number of 
-                  districts will naturally have more extreme ratios, and not all vote count data are available. But there are larger states
-                  that consistently over-represent particular parties, which could indicate gerrymandering.
-                  </br>If you instead select one of the major parties (step 2), the states will colored according to the criterion you choose in step 3:
-                  <ul>
-                  <li>\"Winning Votes\" shows the percentage of votes cast for candidates of the chosen party that won their election.</li>
-                  <li>\"Losing Votes\" is the opposite; it shows what fraction of a party's votes went to losing candidates.</li>
-                  <li>\"Excess Votes\" is the difference between the winner's vote share and the runner-up's vote share.
-                  It is smaller in close elections and larger in landslides.</li>
-                  <li>\"Wasted Votes\" is the percentage of votes that were cast for a losing candidate or for a winning candidate in excess of the runner-up.
-                  In principle, these people could have stayed home on election day and the result of the election would not have changed. (Losing + Excess = Wasted).</li>
-                  </ul>
-                  <center><h4>\"Wasted Votes\"?</h4></center>
-                  We show \"wasted\" votes here as a crude measure of how well-represented a state's electorate is, but the name \"wasted\" is imprecise and should not be taken too literally.
-                  If a population somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
-                  the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
-                  This is technically a dictatorship, and certainly not how we should want elections to be run."))),
+                    HTML(read_file("./TextAssets/About.txt")))),
               fluidRow(
                 box(width = 12, title = HTML("<h2><center>Credits</h2></center>"),
-                    HTML("<center>This application was created by 
-                    <a href = \"https://www.linkedin.com/in/eidan-jacob/\">Eidan Jacob</a> and researched by Jessica Sullivan with the
-                    <a href = \"https://polis.duke.edu/\">Duke Center for Political Leadership, Innovation and Service</a>. 
-                    Questions can be addressed to POLIS Associate Director B.J. Rudell at <a href = \"mailto:polis@duke.edu\">polis@duke.edu</a>.
-                    </br></br><a href = \"https://github.com/ej68/HouseElections\">Fork this on GitHub</a></center>")))))))
+                    HTML(read_file("./TextAssets/Credits.txt"))))))))
 
 plottingChoices = c("Vote Share" = "V", "Winning Votes" = "WiV", "Losing Votes" = "LV", "Excess Votes" = "EV", "Wasted Votes" = "WaV")
 
