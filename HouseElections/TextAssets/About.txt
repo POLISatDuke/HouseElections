@@ -15,8 +15,9 @@ This visualization shows the results of U.S. House of Representatives elections.
                   <li>"Wasted Votes" is the percentage of votes that were cast for a losing candidate or for a winning candidate in excess of the runner-up.
                   In principle, these people could have stayed home on election day and the result of the election would not have changed. (Losing + Excess = Wasted).</li>
                   </ul>
+After clicking on a state, you can press the "+" in the bottom-right corner to view a detailed table of the current year's election results in each district.
                   <center><h4>"Wasted" Votes?</h4></center>
                   We show "wasted" votes here as a crude measure of how well-represented a state's electorate is, but the name "wasted" is imprecise and should not be taken too literally.
-                  If a population somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
+                  If an electorate somehow cooperated to reduce the number of wasted votes (without changing their political preferences), 
                   the equilibrium result would be just one person going to vote for the most popular candidate on election day and everyone else staying home.
                   This is technically a dictatorship, and certainly not how we should want elections to be run.
