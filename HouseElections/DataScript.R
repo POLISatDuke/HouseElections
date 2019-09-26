@@ -3,7 +3,7 @@
 library(readxl)
 library(dplyr)
 library(tidyverse)
-House_Elections = read_excel("./HouseElections/Data/House Elections.xlsx")
+House_Elections = read_excel("./Data/House Elections.xlsx")
 elections = tibble(Year = 0,
                         State = "0",
                         District = 0,
